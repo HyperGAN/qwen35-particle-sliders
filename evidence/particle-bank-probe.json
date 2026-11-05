@@ -1,0 +1,23 @@
+{
+  "schema": "qwen35-native-bank-probe-v1",
+  "teacher_sha256": "64a2cd0985c512e8b539f21e53f2ce01c530e804535f834bd3baf2eb6d5e73ed",
+  "base_content_hash": "708085f8b44fa704601967f3f771b8ec133d9c91dc4f49bd8c7686bd47d537b8",
+  "probe_count": 3,
+  "target_count": 186,
+  "bank_shape": [
+    128,
+    4
+  ],
+  "exact_off": true,
+  "bank_zeroing_hidden_rms": 0.13715723156929016,
+  "teacher_vs_off_hidden_rms": 3.2133069038391113,
+  "runtime": {
+    "backend": "transformers",
+    "transformers": "5.22.1",
+    "torch": "2.15.0+cu132",
+    "device": "cuda",
+    "dtype": "torch.bfloat16",
+    "mps_cpu_fallback": false
+  },
+  "note": "Generic serialization/causal bank probes; not capability scores or proof of quality improvement."
+}

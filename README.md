@@ -4,25 +4,39 @@ Train routed particle teachers on the registered Delta League Qwen3.5-0.8B
 checkpoint, distill them into ordinary linear adapters, and export exact weight
 replacement patches. A separate supervised LoRA provides a practical comparator.
 
-This is a native CUDA experiment in progress. The two-update Qwen smoke run and
-exact patch reconstruction have passed; search and final quality evaluation are
-pending. No official submission or score is claimed.
+The bounded native CUDA experiment is complete: four hyperparameter trials,
+a 256-update particle final, ridge distillation, a 128-update supervised LoRA,
+and local public comparisons. The preferred first submission is **supervised
+LoRA at strength 0.5**. The particle teacher and student remain experimental.
 
-The first supervised comparator has completed 128 updates. On the fixed 512-row,
-eight-benchmark local likelihood subset, its mean is 56.05% versus 52.93% for the
-parent (+3.13 points; paired bootstrap interval about +0.6 to +5.7, sign-test
-p=0.023). A 16-example, zero-shot GSM8K screen at a 1,024-token cap instead
-scored parent 4/16 and LoRA 2/16, with every parent generation truncated and no
-LoRA truncations. That difference is inconclusive (paired interval -37.5 to
-+12.5 points). These are development results; the particle final run and broader
-comparison are pending. The first aggregate receipt is in
-[evidence/lora-likelihood-v1.json](evidence/lora-likelihood-v1.json).
+**[Download the submission bundle and trained adapters](https://github.com/HyperGAN/qwen35-particle-sliders/releases/tag/v0.1.0)** ·
+**[Research record and reproduction](https://github.com/ilblackdragon/deltaleague/pull/13)**
 
-Adding all 114 manifest-selected MMLU examples gives parent 47.37% versus LoRA
-45.61% on MMLU. The nine-task likelihood mean is parent 52.31% versus LoRA
-54.89%; the combined comparison is not separable by the CLI's joint bootstrap
-and sign-test criterion (sign-test p=0.092). The broader result and negative
-math screen are retained when choosing the final candidate.
+| Candidate | Nine-task likelihood mean (626 examples) | Zero-shot GSM8K (16 examples) |
+| --- | ---: | ---: |
+| Parent | 52.31% | 4/16 |
+| Particle distilled student, strength 1 | 50.38% | 1/16 |
+| Supervised LoRA, strength 1 | 54.89% | 2/16 |
+| Supervised LoRA, strength 0.5 | 53.35% | 6/16 |
+
+These are exploratory local development results. The broader paired comparisons
+are inconclusive; no official validation or private-test score is claimed.
+The math screen uses a 1,024-token cap and zero-shot user-question chat, whereas
+the native suite declares five few-shot examples and an 8,192-token cap. All
+parent/particle outputs were truncated; neither supervised variant truncated.
+Half strength preserves the parent's selected MMLU score and gives the better
+math screen among the supervised variants, motivating the balanced preference.
+The nonlinear particle teacher separately scored 1/4 on the first four math
+examples, versus 0/4 for its student on those same rows; both truncated every
+output. This small check does not establish a teacher-quality advantage.
+
+The particle student retains its teacher's held-out hidden-state improvement
+(RMS 1.0280 versus teacher 1.0267 and off 1.1060), but that objective did not
+produce a positive capability signal in this experiment. Native bank probes
+verify exact OFF behavior and nonzero live bank influence after reload. All
+exported patches pass exact reconstruction and loaded-logit equivalence checks.
+See [the complete receipt](evidence/final-experiment.json), including negative
+findings, source identities and artifact hashes.
 
 The particle objective is the actual historical formulation from
 [mikkel/meta-glimmer-particle-slider](https://github.com/mikkel/meta-glimmer-particle-slider):

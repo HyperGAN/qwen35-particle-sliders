@@ -1,0 +1,379 @@
+{
+  "schema": "qwen35-final-experiment-v1",
+  "status": "completed local training/evaluation; ready artifacts; no official submission",
+  "implementation_revision": "45ec4a4fb44bd450b087f4e1926adaca2068b62d",
+  "research_pr": "https://github.com/ilblackdragon/deltaleague/pull/13",
+  "model_id": "qwen35-08b-v1",
+  "parent_version_id": "0ea62f40-7cd8-4d98-9ebb-484192fa05eb",
+  "parent_content_hash": "708085f8b44fa704601967f3f771b8ec133d9c91dc4f49bd8c7686bd47d537b8",
+  "evaluation_id": "public-ladder500-8k-v2",
+  "data": {
+    "prepared_sha256": "66ed9d77ff1bc383d9f1a2259d75fd507cb75fbef17ed612aca67a8e63c1574d",
+    "source_sha256": "17f347dc51477c50d4efb83959dbb7c56297aba886e5544ee2aaed3024813465",
+    "declared_rows": {
+      "train": 128,
+      "dev": 32,
+      "calibration": 32
+    },
+    "retained_rows": {
+      "train": 125,
+      "dev": 32,
+      "calibration": 31
+    }
+  },
+  "search": {
+    "trials": [
+      {
+        "index": 0,
+        "lr": 0.0001,
+        "d_lr_mult": 1.5,
+        "particle_lr_mult": 10.0,
+        "steps": 32,
+        "student_relative_rms": 0.9932579359835368
+      },
+      {
+        "index": 1,
+        "lr": 0.0003,
+        "d_lr_mult": 1.5,
+        "particle_lr_mult": 10.0,
+        "steps": 32,
+        "student_relative_rms": 0.9854073748472906
+      },
+      {
+        "index": 2,
+        "lr": 0.0006,
+        "d_lr_mult": 1.5,
+        "particle_lr_mult": 10.0,
+        "steps": 32,
+        "student_relative_rms": 0.9811801247458077
+      },
+      {
+        "index": 3,
+        "lr": 0.0003,
+        "d_lr_mult": 0.75,
+        "particle_lr_mult": 2.5,
+        "steps": 32,
+        "student_relative_rms": 0.9937019168894475
+      }
+    ],
+    "selected_trial": 2,
+    "final_steps": 256
+  },
+  "final_particle": {
+    "kind": "particle-distilled",
+    "steps": 256,
+    "raw": {
+      "off_rms": 1.1059553623199463,
+      "on_rms": 1.1348174810409546
+    },
+    "ema": {
+      "off_rms": 1.1059553623199463,
+      "on_rms": 1.026728630065918
+    },
+    "selected": "ema",
+    "student": {
+      "off_rms": 1.1059553623199463,
+      "on_rms": 1.028029203414917
+    },
+    "initial": {
+      "off_rms": 1.1059553623199463,
+      "on_rms": 1.1059553623199463
+    },
+    "elapsed_seconds": 773.1122021399999,
+    "deltas_sha256": "f8714e9fbfe7dd70cd8c615c4eff29a8ed5051b942fae92dab1da836f9b0011e"
+  },
+  "target_count": 186,
+  "quality": {
+    "parent": {
+      "likelihood": 52.31176900584795,
+      "likelihood_benchmarks": {
+        "arc_challenge": 32.8125,
+        "arc_easy": 62.5,
+        "boolq": 65.625,
+        "commonsense_qa": 57.8125,
+        "hellaswag": 48.4375,
+        "openbookqa": 29.6875,
+        "piqa": 70.3125,
+        "winogrande": 56.25,
+        "mmlu": 47.368421052631575
+      },
+      "math": 25.0,
+      "math_count": 16,
+      "math_truncation": 1
+    },
+    "particle": {
+      "likelihood": 50.3807261208577,
+      "likelihood_benchmarks": {
+        "arc_challenge": 29.6875,
+        "arc_easy": 62.5,
+        "boolq": 62.5,
+        "commonsense_qa": 51.5625,
+        "hellaswag": 45.3125,
+        "openbookqa": 29.6875,
+        "piqa": 71.875,
+        "winogrande": 54.6875,
+        "mmlu": 45.614035087719294
+      },
+      "math": 6.25,
+      "math_count": 16,
+      "math_truncation": 1,
+      "likelihood_paired": {
+        "baseline_mean": 52.31176900584795,
+        "candidate_mean": 50.3807261208577,
+        "diff": -1.9310428849902534,
+        "ci95": [
+          -4.133162768031189,
+          0.22843567251461985
+        ],
+        "run_worst_case_se": 2.0319358420457494,
+        "wins": 20,
+        "losses": 32,
+        "ties": 574,
+        "sign_test_p": 0.12634707581392135,
+        "separable": false
+      },
+      "math_paired": {
+        "baseline_mean": 25.0,
+        "candidate_mean": 6.25,
+        "diff": -18.75,
+        "ci95": [
+          -37.5,
+          0.0
+        ],
+        "run_worst_case_se": 12.5,
+        "wins": 0,
+        "losses": 3,
+        "ties": 13,
+        "sign_test_p": 0.25,
+        "separable": false
+      }
+    },
+    "lora_1": {
+      "likelihood": 54.89461500974659,
+      "likelihood_benchmarks": {
+        "arc_challenge": 39.0625,
+        "arc_easy": 70.3125,
+        "boolq": 73.4375,
+        "commonsense_qa": 54.6875,
+        "hellaswag": 51.5625,
+        "openbookqa": 34.375,
+        "piqa": 70.3125,
+        "winogrande": 54.6875,
+        "mmlu": 45.614035087719294
+      },
+      "math": 12.5,
+      "math_count": 16,
+      "math_truncation": 0,
+      "likelihood_paired": {
+        "baseline_mean": 52.31176900584795,
+        "candidate_mean": 54.89461500974659,
+        "diff": 2.5828460038986356,
+        "ci95": [
+          0.22843567251461985,
+          4.937256335282651
+        ],
+        "run_worst_case_se": 2.0319358420457494,
+        "wins": 37,
+        "losses": 23,
+        "ties": 566,
+        "sign_test_p": 0.09246098107292373,
+        "separable": false
+      },
+      "math_paired": {
+        "baseline_mean": 25.0,
+        "candidate_mean": 12.5,
+        "diff": -12.5,
+        "ci95": [
+          -37.5,
+          12.5
+        ],
+        "run_worst_case_se": 12.5,
+        "wins": 1,
+        "losses": 3,
+        "ties": 12,
+        "sign_test_p": 0.625,
+        "separable": false
+      }
+    },
+    "lora_05": {
+      "likelihood": 53.35343567251462,
+      "likelihood_benchmarks": {
+        "arc_challenge": 37.5,
+        "arc_easy": 64.0625,
+        "boolq": 67.1875,
+        "commonsense_qa": 59.375,
+        "hellaswag": 50.0,
+        "openbookqa": 29.6875,
+        "piqa": 70.3125,
+        "winogrande": 54.6875,
+        "mmlu": 47.368421052631575
+      },
+      "math": 37.5,
+      "math_count": 16,
+      "math_truncation": 0,
+      "likelihood_paired": {
+        "baseline_mean": 52.31176900584795,
+        "candidate_mean": 53.35343567251462,
+        "diff": 1.0416666666666667,
+        "ci95": [
+          -0.584795321637427,
+          2.7016325536062378
+        ],
+        "run_worst_case_se": 2.0319358420457494,
+        "wins": 18,
+        "losses": 12,
+        "ties": 596,
+        "sign_test_p": 0.361594608053565,
+        "separable": false
+      },
+      "math_paired": {
+        "baseline_mean": 25.0,
+        "candidate_mean": 37.5,
+        "diff": 12.5,
+        "ci95": [
+          -18.75,
+          43.75
+        ],
+        "run_worst_case_se": 12.5,
+        "wins": 4,
+        "losses": 2,
+        "ties": 10,
+        "sign_test_p": 0.6875,
+        "separable": false
+      }
+    }
+  },
+  "teacher_student_math_probe": {
+    "examples": 4,
+    "teacher_score": 25.0,
+    "student_score": 0.0,
+    "example_indices": [
+      3,
+      25,
+      28,
+      99
+    ],
+    "all_truncated": true,
+    "scope": "First4 fixed public GSM8K selections; small zero-shot capped screen only."
+  },
+  "bank_probe": {
+    "schema": "qwen35-native-bank-probe-v1",
+    "teacher_sha256": "64a2cd0985c512e8b539f21e53f2ce01c530e804535f834bd3baf2eb6d5e73ed",
+    "base_content_hash": "708085f8b44fa704601967f3f771b8ec133d9c91dc4f49bd8c7686bd47d537b8",
+    "probe_count": 3,
+    "target_count": 186,
+    "bank_shape": [
+      128,
+      4
+    ],
+    "exact_off": true,
+    "bank_zeroing_hidden_rms": 0.13715723156929016,
+    "teacher_vs_off_hidden_rms": 3.2133069038391113,
+    "runtime": {
+      "backend": "transformers",
+      "transformers": "5.22.1",
+      "torch": "2.15.0+cu132",
+      "device": "cuda",
+      "dtype": "torch.bfloat16",
+      "mps_cpu_fallback": false
+    },
+    "note": "Generic serialization/causal bank probes; not capability scores or proof of quality improvement."
+  },
+  "patches": {
+    "lora_full": {
+      "schema": "qwen35-loaded-submission-verification-v1",
+      "parent_version_id": "0ea62f40-7cd8-4d98-9ebb-484192fa05eb",
+      "identity_hash": "96336424b3b32c1b39d0ea157a559e148930a51bb019333b7bf6614391cfb025",
+      "canonical_parent_content_hash": "708085f8b44fa704601967f3f771b8ec133d9c91dc4f49bd8c7686bd47d537b8",
+      "canonical_candidate_content_hash": "a239ac71468fc7402b210ebd006d2dc15ad7e1d6adb69131363823d25fa833c8",
+      "artifact_sha256": "4e142fcd549a1fd9046245cd8f0e11048ef8c48ebb9ff853afc619e72a19c2b3",
+      "reconstructed_weights_sha256": "6ae5f7610be1c986614daebdcd48f1e5c143f1a501b0f74f7e22579e47afb2b7",
+      "direct_deltas_sha256": "68b6dfa452168cbc690405af817341a0533bc47439f91df8c482cdc956b1bf39",
+      "strength": 1.0,
+      "norm_gain": 1.0,
+      "exact_loaded_logits": true,
+      "probe_count": 3,
+      "changed_prefix": "model.language_model.",
+      "runtime": {
+        "backend": "transformers",
+        "transformers": "5.22.1",
+        "torch": "2.15.0+cu132",
+        "device": "cuda",
+        "dtype": "torch.bfloat16",
+        "mps_cpu_fallback": false
+      },
+      "note": "Probes verify serialization and load equivalence; they are not capability evaluations."
+    },
+    "lora_half": {
+      "schema": "qwen35-loaded-submission-verification-v1",
+      "parent_version_id": "0ea62f40-7cd8-4d98-9ebb-484192fa05eb",
+      "identity_hash": "96336424b3b32c1b39d0ea157a559e148930a51bb019333b7bf6614391cfb025",
+      "canonical_parent_content_hash": "708085f8b44fa704601967f3f771b8ec133d9c91dc4f49bd8c7686bd47d537b8",
+      "canonical_candidate_content_hash": "b2dfb0fb11e30c606f4366b81b29487ca017745ce0bdc5da49cfc589a0a318e4",
+      "artifact_sha256": "7c19870c30cfb09587ea0c26c2f9d27537dfdc9ea6281da297d0197682a1ec84",
+      "reconstructed_weights_sha256": "86055388ac30500ae0f1e5a3d9f0c1cdc0c09ebb42187c42b3057c09ca5d87a9",
+      "direct_deltas_sha256": "68b6dfa452168cbc690405af817341a0533bc47439f91df8c482cdc956b1bf39",
+      "strength": 0.5,
+      "norm_gain": 1.0,
+      "exact_loaded_logits": true,
+      "probe_count": 3,
+      "changed_prefix": "model.language_model.",
+      "runtime": {
+        "backend": "transformers",
+        "transformers": "5.22.1",
+        "torch": "2.15.0+cu132",
+        "device": "cuda",
+        "dtype": "torch.bfloat16",
+        "mps_cpu_fallback": false
+      },
+      "note": "Probes verify serialization and load equivalence; they are not capability evaluations."
+    },
+    "particle": {
+      "schema": "qwen35-loaded-submission-verification-v1",
+      "parent_version_id": "0ea62f40-7cd8-4d98-9ebb-484192fa05eb",
+      "identity_hash": "96336424b3b32c1b39d0ea157a559e148930a51bb019333b7bf6614391cfb025",
+      "canonical_parent_content_hash": "708085f8b44fa704601967f3f771b8ec133d9c91dc4f49bd8c7686bd47d537b8",
+      "canonical_candidate_content_hash": "c93e2237b3cde2e9921025f801799913c1a8f0518a83cdfda4364eddda38b538",
+      "artifact_sha256": "3927c5dcbf9a7b6855ccd719a625dbc7553f113ce218db94ed1b4a1b4190f2e2",
+      "reconstructed_weights_sha256": "ca3575e9a40888af070dc5b46d584eb4db5c032cb68012824b31ea7951169ac5",
+      "direct_deltas_sha256": "f8714e9fbfe7dd70cd8c615c4eff29a8ed5051b942fae92dab1da836f9b0011e",
+      "strength": 1.0,
+      "norm_gain": 1.0,
+      "exact_loaded_logits": true,
+      "probe_count": 3,
+      "changed_prefix": "model.language_model.",
+      "runtime": {
+        "backend": "transformers",
+        "transformers": "5.22.1",
+        "torch": "2.15.0+cu132",
+        "device": "cuda",
+        "dtype": "torch.bfloat16",
+        "mps_cpu_fallback": false
+      },
+      "note": "Probes verify serialization and load equivalence; they are not capability evaluations."
+    }
+  },
+  "preferred": {
+    "method": "supervised rank8 LoRA",
+    "strength": 0.5,
+    "norm_gain": 1.0,
+    "artifact_sha256": "7c19870c30cfb09587ea0c26c2f9d27537dfdc9ea6281da297d0197682a1ec84",
+    "reason": "Preserved selected MMLU and higher capped math accuracy than full-strength LoRA; exploratory balanced preference."
+  },
+  "release_package": {
+    "archive_sha256": "034a9041267b2584c0832c86a8bce3b7cf2099ae4b0219055bf2c88d6634c1a3",
+    "archive_bytes": 799985654,
+    "payload_file_hashes_verified": 7,
+    "exact_uploaded_patch_weights": "7c19870c30cfb09587ea0c26c2f9d27537dfdc9ea6281da297d0197682a1ec84",
+    "source_pr": "https://github.com/ilblackdragon/deltaleague/pull/13"
+  },
+  "limitations": [
+    "No official validation or private-test score; no quota consumed.",
+    "Exploratory public-development selection; broader paired comparisons are inconclusive.",
+    "Local likelihood subset covers9 of18 benchmarks; no complete official-suite reproduction.",
+    "Math uses zero-shot chat/1024-token cap instead of native5-shot/8192 protocol.",
+    "Hidden-state matching and calibration error do not establish capability improvement.",
+    "Historical PG82 native Qwen cohort; modern PG094 Glimmer admission not claimed.",
+    "Adapters train through the full BF16 text model; this is not full-parameter SFT."
+  ]
+}

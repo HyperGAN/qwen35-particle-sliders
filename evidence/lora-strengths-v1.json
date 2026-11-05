@@ -1,0 +1,135 @@
+{
+  "schema": "qwen35-lora-strength-comparison-v1",
+  "protocol": "Local nine-task native likelihood plus separate zero-shot 16-example GSM8K screen",
+  "strengths": {
+    "parent": {
+      "likelihood_mean": 52.31176900584795,
+      "benchmarks": {
+        "arc_challenge": 32.8125,
+        "arc_easy": 62.5,
+        "boolq": 65.625,
+        "commonsense_qa": 57.8125,
+        "hellaswag": 48.4375,
+        "openbookqa": 29.6875,
+        "piqa": 70.3125,
+        "winogrande": 56.25,
+        "mmlu": 47.368421052631575
+      },
+      "math_score": 25.0,
+      "math_truncation": 1,
+      "artifact": {
+        "deltas_sha256": null,
+        "strength": 1.0,
+        "norm_gain": 1.0
+      }
+    },
+    "lora_1": {
+      "likelihood_mean": 54.89461500974659,
+      "benchmarks": {
+        "arc_challenge": 39.0625,
+        "arc_easy": 70.3125,
+        "boolq": 73.4375,
+        "commonsense_qa": 54.6875,
+        "hellaswag": 51.5625,
+        "openbookqa": 34.375,
+        "piqa": 70.3125,
+        "winogrande": 54.6875,
+        "mmlu": 45.614035087719294
+      },
+      "math_score": 12.5,
+      "math_truncation": 0,
+      "artifact": {
+        "deltas_sha256": "68b6dfa452168cbc690405af817341a0533bc47439f91df8c482cdc956b1bf39",
+        "strength": 1.0,
+        "norm_gain": 1.0
+      },
+      "likelihood_paired": {
+        "baseline_mean": 52.31176900584795,
+        "candidate_mean": 54.89461500974659,
+        "diff": 2.5828460038986356,
+        "ci95": [
+          0.22843567251461985,
+          4.937256335282651
+        ],
+        "run_worst_case_se": 2.0319358420457494,
+        "wins": 37,
+        "losses": 23,
+        "ties": 566,
+        "sign_test_p": 0.09246098107292373,
+        "separable": false
+      },
+      "math_paired": {
+        "baseline_mean": 25.0,
+        "candidate_mean": 12.5,
+        "diff": -12.5,
+        "ci95": [
+          -37.5,
+          12.5
+        ],
+        "run_worst_case_se": 12.5,
+        "wins": 1,
+        "losses": 3,
+        "ties": 12,
+        "sign_test_p": 0.625,
+        "separable": false
+      }
+    },
+    "lora_05": {
+      "likelihood_mean": 53.35343567251462,
+      "benchmarks": {
+        "arc_challenge": 37.5,
+        "arc_easy": 64.0625,
+        "boolq": 67.1875,
+        "commonsense_qa": 59.375,
+        "hellaswag": 50.0,
+        "openbookqa": 29.6875,
+        "piqa": 70.3125,
+        "winogrande": 54.6875,
+        "mmlu": 47.368421052631575
+      },
+      "math_score": 37.5,
+      "math_truncation": 0,
+      "artifact": {
+        "deltas_sha256": "68b6dfa452168cbc690405af817341a0533bc47439f91df8c482cdc956b1bf39",
+        "strength": 0.5,
+        "norm_gain": 1.0
+      },
+      "likelihood_paired": {
+        "baseline_mean": 52.31176900584795,
+        "candidate_mean": 53.35343567251462,
+        "diff": 1.0416666666666667,
+        "ci95": [
+          -0.584795321637427,
+          2.7016325536062378
+        ],
+        "run_worst_case_se": 2.0319358420457494,
+        "wins": 18,
+        "losses": 12,
+        "ties": 596,
+        "sign_test_p": 0.361594608053565,
+        "separable": false
+      },
+      "math_paired": {
+        "baseline_mean": 25.0,
+        "candidate_mean": 37.5,
+        "diff": 12.5,
+        "ci95": [
+          -18.75,
+          43.75
+        ],
+        "run_worst_case_se": 12.5,
+        "wins": 4,
+        "losses": 2,
+        "ties": 10,
+        "sign_test_p": 0.6875,
+        "separable": false
+      }
+    }
+  },
+  "limitations": [
+    "Exploratory public-development selection; no independent confirmation set.",
+    "None of the broader comparisons satisfies the official CLI separability criterion.",
+    "Math uses zero-shot chat and a1024-token cap, not native5-shot/8192-token protocol.",
+    "Private-test and full official-validation scores unknown."
+  ]
+}
