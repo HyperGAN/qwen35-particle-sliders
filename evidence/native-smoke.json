@@ -1,0 +1,67 @@
+{
+  "status": "native-mechanics-smoke-only",
+  "result": {
+    "kind": "particle-distilled",
+    "steps": 2,
+    "raw": {
+      "off_rms": 1.1059553623199463,
+      "on_rms": 1.2550078630447388
+    },
+    "ema": {
+      "off_rms": 1.1059553623199463,
+      "on_rms": 1.105366587638855
+    },
+    "selected": "ema",
+    "student": {
+      "off_rms": 1.1059553623199463,
+      "on_rms": 1.1056835651397705
+    },
+    "initial": {
+      "off_rms": 1.1059553623199463,
+      "on_rms": 1.1059553623199463
+    },
+    "elapsed_seconds": 46.08498381700019,
+    "deltas_sha256": "5454a440a38f62d2ecff24483fc061ef8492ff0915aca321fe0120097253470b",
+    "target_count": 186
+  },
+  "export": {
+    "schema": "qwen35-exact-export-v1",
+    "parent_version_id": "0ea62f40-7cd8-4d98-9ebb-484192fa05eb",
+    "parent_content_hash": "708085f8b44fa704601967f3f771b8ec133d9c91dc4f49bd8c7686bd47d537b8",
+    "evaluation_id": "public-ladder500-8k-v2",
+    "parent_weights_sha256": "04b1c301231dd422b8860db31311ab2721511346a32cb1e079c4c4e5f1fe4696",
+    "deltas_sha256": "5454a440a38f62d2ecff24483fc061ef8492ff0915aca321fe0120097253470b",
+    "strength": 1.0,
+    "norm_gain": 1.0,
+    "artifact_sha256": "b3792f808d3d57e0f821b218b38cba563a4e9098c1f35037bc0034988f5580de",
+    "exact_reconstruction": true,
+    "all_other_tensors_unchanged": true,
+    "finite": true,
+    "changed_tensor_count": 178
+  },
+  "runtime": {
+    "torch": "2.15.0",
+    "transformers": "5.22.1",
+    "particlegan": "0.6.0",
+    "deltaleague": "0.1.1",
+    "meta-glimmer-particle-slider": "0.1.0",
+    "safetensors": "0.8.0"
+  },
+  "source_sha256": {
+    "src/qwen35_sliders/__init__.py": "24c09fc9ff6ab3cd8f389f6968d48c43ed51a69044a606fca3a51a192c8f43b7",
+    "src/qwen35_sliders/cli.py": "1fd7838c4f2a40bb9cda0c3b92478b90ef8f6edf36e3a412978ee9c9833cd6a9",
+    "src/qwen35_sliders/data.py": "16f758788721ef39476dcac751535c906d1b5bee9b77550e3e9f713ff026ef24",
+    "src/qwen35_sliders/evaluation.py": "886857a5b0ea8216158565876fe19ee4e7767d1ad4083733636b0f0df0cf7385",
+    "src/qwen35_sliders/export.py": "8a5da1c12d1ce48a72395386f6d171a5eb4ce7e7c3b0a1532099713df69f956d",
+    "src/qwen35_sliders/host.py": "c28c7d2a4d889d050849318493fcdc7b74e7b6b1e6fb0c322d5b935b4a50ef5d",
+    "src/qwen35_sliders/search.py": "f0cb6f957f57b0368c17aa26a792ec2e028492320e5e68c23f281573fe62b1dc",
+    "src/qwen35_sliders/training.py": "a2b602cee34159bb37f4962129ed4d13513019b7b2e8bb2f8936205ebf9edcde",
+    "src/qwen35_sliders/upstream.py": "ad81b7f51394db2cbc43c00671d58064311f4cdef88420b814a2e717770a5259"
+  },
+  "tests": "2 integration tests passed; real upstream update, frozen base and linear merge equivalence",
+  "limitations": [
+    "Two updates do not qualify capability improvement.",
+    "Four-trial native search and final run in progress.",
+    "No official submission or private test score."
+  ]
+}

@@ -1,0 +1,11 @@
+.venv/
+.cache/
+.babel-reports/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+runs/
+experiment/
+*.safetensors
+*.pt
+*.generations.jsonl

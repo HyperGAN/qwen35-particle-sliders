@@ -1,0 +1,13 @@
+{
+  "workspace": "/ml2/deltaleague/experiment",
+  "data": "/ml2/deltaleague/data/gsm-v1.json",
+  "output": "/ml2/deltaleague/runs/lora-v1",
+  "scope": "all",
+  "device": "cuda",
+  "seed": 7,
+  "steps": 128,
+  "batch": 4,
+  "max_tokens": 384,
+  "rank": 8,
+  "lr": 0.0001
+}
