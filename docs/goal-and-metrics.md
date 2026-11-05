@@ -99,27 +99,50 @@ on the current workstation it is `/ml2/deltaleague/.venv-pg095`.
 ```sh
 qwen35-slider evaluate-math --workspace experiment \
   --teacher runs/particle-search-pg095-v2/final/particle.safetensors \
-  --strength 0 --limit 64 --max-tokens 8192 \
+  --strength 0 --limit 16 --offset 0 --seed 1000 --max-tokens 8192 \
   --output runs/eval/pg095-teacher-off.json
 qwen35-slider evaluate-math --workspace experiment \
   --teacher runs/particle-search-pg095-v2/final/particle.safetensors \
-  --strength 1 --limit 64 --max-tokens 8192 \
+  --strength 1 --limit 16 --offset 0 --seed 1000 --max-tokens 8192 \
   --output runs/eval/pg095-teacher-on.json
 delta compare runs/eval/pg095-teacher-off.json runs/eval/pg095-teacher-on.json \
   --output runs/eval/pg095-teacher-comparison.json
 ```
 
-The command fixes the sampling seed at `1000` for both runs. It uses the same
-public question selection and zero-shot chat prompt. Even with an 8,192-token
-budget, it does not reproduce the official five-shot protocol. Treat this as a
-development comparison, not final confirmation or the complete league score.
-The earlier experiment already inspected some of these public questions.
+These are development commands. The [predeclared evaluation plan](../configs/evaluation-plan.json)
+reserves selection positions `0..15` for development and `16..63` for
+confirmation. After freezing the candidate and strength, use `--offset 16
+--limit 48 --seed 2000` for the primary confirmation, with seeds `2001` and
+`2002` for separately reported replications. Use a fresh output filename for
+every run. Changing the slice or seed changes the protocol identity, so mismatched
+reports are refused by `delta compare`.
+
+The prompt remains zero-shot chat. Even with an 8,192-token budget, this does not
+reproduce the official five-shot protocol or the complete league score. Report
+the selected questions and generation settings explicitly. Do not pool repeated
+seeds of the same questions as if they were independent new questions.
 
 For the student, repeat the comparison with `--deltas .../deltas.safetensors`
-instead of `--teacher .../particle.safetensors`. The current likelihood evaluator
-accepts student weight deltas; it does not yet accept nonlinear teachers.
-Broader teacher coverage and fresh-seed/untouched-selection controls are remaining
-work if needed for the predeclared confirmation plan.
+instead of `--teacher .../particle.safetensors`. Both the math and likelihood
+commands now accept nonlinear teachers. Use the latter to check broader task
+regressions before and after distillation:
+
+```sh
+qwen35-slider evaluate-likelihood --workspace experiment \
+  --teacher runs/particle-search-pg095-v2/final/particle.safetensors \
+  --strength 0 --tasks arc_challenge arc_easy boolq commonsense_qa hellaswag openbookqa piqa winogrande mmlu \
+  --output runs/eval/pg095-teacher-likelihood-off.json
+qwen35-slider evaluate-likelihood --workspace experiment \
+  --teacher runs/particle-search-pg095-v2/final/particle.safetensors \
+  --strength 1 --tasks arc_challenge arc_easy boolq commonsense_qa hellaswag openbookqa piqa winogrande mmlu \
+  --output runs/eval/pg095-teacher-likelihood-on.json
+delta compare runs/eval/pg095-teacher-likelihood-off.json runs/eval/pg095-teacher-likelihood-on.json
+```
+
+These nine tasks are a local regression check. They do not cover every official
+league task. They use the manifest's task metrics and selected documents, not
+the training hidden-error metric. Once confirmation results have been inspected,
+do not describe that same set as untouched in a later tuning round.
 
 ## Completion condition
 

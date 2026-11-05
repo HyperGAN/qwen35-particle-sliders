@@ -61,11 +61,14 @@ def prepare_tasks(workspace, names, limit=None):
 
 
 def evaluate(workspace, output, *, deltas=None, strength=1., norm_gain=1.,
-             names=None, limit=None, device="cuda", batch=4):
+             names=None, limit=None, device="cuda", batch=4, teacher=None, upstream=None):
+    if deltas and teacher:
+        raise ValueError("Choose merged deltas or nonlinear teacher")
     from lm_eval import evaluator
     from lm_eval.models.huggingface import HFLM
     from safetensors.torch import load_file
     from .training import load_host
+    from .candidate import applied_teacher
     from delta_cli.local import read_workspace
     torch.set_num_threads(4)
     output = Path(output)
@@ -92,9 +95,10 @@ def evaluate(workspace, output, *, deltas=None, strength=1., norm_gain=1.,
             parameter.copy_(((parameter.float()+1)*norm_gain-1).to(parameter.dtype))
     model = HFLM(pretrained=runner.model, tokenizer=runner.tokenizer, backend="causal", device=device,
                  batch_size=batch, max_length=2048, dtype="bfloat16")
-    result = evaluator.simple_evaluate(model=model, tasks=tasks, samples=samples, batch_size=batch,
-        apply_chat_template=False, random_seed=0, numpy_random_seed=1234, torch_random_seed=1234,
-        fewshot_random_seed=1234, bootstrap_iters=1000, log_samples=True)
+    with applied_teacher(runner.model, teacher, strength, upstream) as teacher_identity:
+        result = evaluator.simple_evaluate(model=model, tasks=tasks, samples=samples, batch_size=batch,
+            apply_chat_template=False, random_seed=0, numpy_random_seed=1234, torch_random_seed=1234,
+            fewshot_random_seed=1234, bootstrap_iters=1000, log_samples=True)
     rows, scores = [], {name:[] for name in names}
     for name in individual:
         metric = "acc_norm" if "acc_norm" in result["samples"][name][0] else "acc"
@@ -119,7 +123,9 @@ def evaluate(workspace, output, *, deltas=None, strength=1., norm_gain=1.,
         config_id=config["id"], source_version_id=metadata["id"], validation_sha256=hashlib.sha256(json.dumps(protocol,sort_keys=True).encode()).hexdigest(),
         official_manifest_sha256=config["validation_sha256"], generation=dict(kind="native-likelihood", chat_template=False),
         coverage=dict(benchmarks=names, examples=len(rows), full_official_suite=False),
-        artifact=dict(deltas_sha256=digest(deltas) if deltas else None, strength=strength, norm_gain=norm_gain),
+        artifact=dict(deltas_sha256=digest(deltas) if deltas else None,
+                      teacher_sha256=digest(teacher) if teacher else None,
+                      teacher_engine=teacher_identity, strength=strength, norm_gain=norm_gain),
         validation_score=statistics.mean(components.values()), validation_benchmarks=components,
         protocol=protocol, runtime=provenance["runtime"], lm_eval_version=version("lm-eval"),
         note="Advisory subset likelihood mean; not official validation, not a private test score."

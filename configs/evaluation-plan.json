@@ -1,0 +1,59 @@
+{
+  "schema": "qwen35-particle-evaluation-plan-v1",
+  "status": "predeclared before native PG0.9.5 training/evaluation; not executed",
+  "parent_id": "0ea62f40-7cd8-4d98-9ebb-484192fa05eb",
+  "parent_content_hash": "708085f8b44fa704601967f3f771b8ec133d9c91dc4f49bd8c7686bd47d537b8",
+  "official_public_manifest_sha256": "996573d687b0d0f1e088f1e918cd153fa0f80cff454a7e9a7ab5ac2eb374d4d2",
+  "source_dataset_revision": "740312add88f781978c0658806c59bc2815b9866",
+  "primary_task": "GSM8K public selection, zero-shot chat, identical ON/OFF generation",
+  "development": {
+    "offset": 0,
+    "limit": 16,
+    "seeds": [
+      1000
+    ],
+    "selection_sha256": "dbb9172a7fd4bdc4dd8775b7c380809615a02737a6fc6067c56a5436496c5055",
+    "exposure": "Already inspected during historical v0.1.0 evaluation; development only."
+  },
+  "confirmation": {
+    "offset": 16,
+    "limit": 48,
+    "primary_seed": 2000,
+    "replication_seeds": [
+      2001,
+      2002
+    ],
+    "selection_sha256": "700b3f278c4d47365a0036c8befa5126f3c478b35dc10874ac72458316b26a99",
+    "exposure": "Not evaluated by this session in historical v0.1.0 math runs. Reserve until candidate/strength/source/evaluation settings frozen."
+  },
+  "generation": {
+    "max_tokens": 8192,
+    "prompt": "zero-shot user question; no worked solution in model input",
+    "other_settings": "Use registered workspace generation unchanged for ON and OFF."
+  },
+  "candidate": {
+    "kind": "nonlinear particle teacher first; then its distilled student and actual exported patch",
+    "default_strength": 1.0,
+    "alternative_strengths": [
+      0.5
+    ],
+    "strength_selection": "Development questions only; freeze before confirmation; no tuning on confirmation results.",
+    "required_frozen_identifiers": [
+      "source_commit",
+      "teacher_sha256",
+      "strength",
+      "model_parent",
+      "data_sha256",
+      "evaluation_plan_sha256"
+    ]
+  },
+  "criteria": {
+    "primary": "Positive ON-OFF score difference, CI95 lower bound >0 and paired sign-test p<0.05 on seed2000.",
+    "replication": "ON-OFF difference positive on each separately reported replication seed; do not pool repeated questions as independent examples.",
+    "regressions": "Inspect matched nine-task likelihood comparison and all per-task changes before recommending any candidate; report inconclusive uncertainty honestly.",
+    "truncation": "Report ON/OFF truncation rates and token counts; never interpret shorter answers alone as quality.",
+    "export": "Recheck actual student/patch quality, canonical lineage, reconstructed tensors and loaded-logit equivalence.",
+    "limitations": "This is a local math confirmation and likelihood regression plan, not the complete official18-task league score. Never claim an overall official win from this subset."
+  },
+  "failure_rule": "No submission for a negative/inconclusive result. Once confirmation is inspected it is no longer an untouched holdout; any further tuning needs a newly predeclared independent confirmation plan."
+}

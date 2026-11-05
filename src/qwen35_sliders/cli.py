@@ -33,6 +33,8 @@ def main():
     evaluate.add_argument("--workspace", required=True)
     evaluate.add_argument("--output", required=True)
     evaluate.add_argument("--deltas")
+    evaluate.add_argument("--teacher")
+    evaluate.add_argument("--upstream")
     evaluate.add_argument("--strength", type=float, default=1.)
     evaluate.add_argument("--norm-gain", type=float, default=1.)
     evaluate.add_argument("--tasks", nargs="+")
@@ -48,6 +50,8 @@ def main():
     math.add_argument("--norm-gain", type=float, default=1.)
     math.add_argument("--limit", type=int, default=16)
     math.add_argument("--max-tokens", type=int, default=1024)
+    math.add_argument("--offset", type=int, default=0)
+    math.add_argument("--seed", type=int, default=1000)
     args = parser.parse_args()
     if args.command == "prepare-gsm":
         result = prepare_gsm(args.source, args.output, train=args.train, dev=args.dev, calibration=args.calibration)
@@ -62,12 +66,13 @@ def main():
     elif args.command == "evaluate-likelihood":
         from .evaluation import evaluate
         print(json.dumps(evaluate(args.workspace, args.output, deltas=args.deltas,
-            strength=args.strength, norm_gain=args.norm_gain, names=args.tasks, limit=args.limit, batch=args.batch), indent=2))
+            strength=args.strength, norm_gain=args.norm_gain, names=args.tasks, limit=args.limit,
+            batch=args.batch, teacher=args.teacher, upstream=args.upstream), indent=2))
     elif args.command == "evaluate-math":
         from .math_evaluation import evaluate_math
         print(json.dumps(evaluate_math(args.workspace, args.output, deltas=args.deltas,
             teacher=args.teacher, upstream=args.upstream, strength=args.strength, norm_gain=args.norm_gain,
-            limit=args.limit, max_tokens=args.max_tokens), indent=2))
+            limit=args.limit, max_tokens=args.max_tokens, offset=args.offset, seed=args.seed), indent=2))
     elif args.command == "search":
         from .search import search
         search(json.loads(Path(args.config).read_text()))

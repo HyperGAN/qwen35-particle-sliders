@@ -22,3 +22,8 @@ historical upstream ParticleGAN formulation and ridge distillation code.
 - GSM8K training data: openai/grade-school-math (MIT); downloaded separately,
   hash recorded in data and run contracts. No benchmark examples or raw model
   generation logs are committed here.
+
+Current evaluation pins official Delta League source commit
+d5fb6169fe6384c20077811c4860fb59874bd5b8 (package version 0.1.1), including
+its unchanged paired comparison implementation. The PyPI 0.1.1 wheel omits
+that command; this project does not modify the scorer to add it.

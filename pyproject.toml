@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "qwen35-particle-sliders"
-version = "0.2.0"
+version = "0.2.1"
 description = "Qwen3.5 particle teachers, distilled weight edits, and Delta League experiments"
 requires-python = ">=3.12"
 dependencies = [
-  "deltaleague[local]==0.1.1",
+  "deltaleague[local] @ git+https://github.com/ilblackdragon/deltaleague.git@d5fb6169fe6384c20077811c4860fb59874bd5b8",
   "particle-sliders-core @ git+https://github.com/HyperGAN/particle-sliders.git@3dd672a7f9b8c169daef90fd63e4bb42b9ddc423#subdirectory=packages/particle-sliders-core",
 ]
 

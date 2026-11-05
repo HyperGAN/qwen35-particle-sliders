@@ -88,7 +88,11 @@ limited benchmark coverage. `evaluate-math` also exists; by default it uses only
 16 questions, zero-shot chat and a 1,024-token cap. That is a development screen,
 not the full suite's five-shot/8,192-token protocol. Report truncation and compare
 both models under identical settings. `--teacher` evaluates a saved nonlinear
-particle teacher separately from the student.
+particle teacher separately from the student in both math and likelihood checks.
+Math also accepts `--offset` within the pinned public selection and `--seed`;
+these controls are included in the comparison protocol identity. See the
+[goal/metric guide](goal-and-metrics.md) and the frozen evaluation-plan JSON for
+development versus confirmation use.
 
 No training/export command logs in, uploads weights or submits automatically.
 Do not submit without a demonstrated win over the base. The earlier research
