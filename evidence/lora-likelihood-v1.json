@@ -1,0 +1,240 @@
+{
+  "status": "advisory local eight-benchmark likelihood comparison",
+  "model_id": "qwen35-08b-v1",
+  "parent_version_id": "0ea62f40-7cd8-4d98-9ebb-484192fa05eb",
+  "evaluation_id": "public-ladder500-8k-v2",
+  "official_manifest_sha256": "996573d687b0d0f1e088f1e918cd153fa0f80cff454a7e9a7ab5ac2eb374d4d2",
+  "protocol_sha256": "1b58169cc7b50d9612a5ecc2ca9d0d022f55adb377bd8f34f4940520f0c51be6",
+  "coverage": {
+    "benchmarks": [
+      "arc_challenge",
+      "arc_easy",
+      "boolq",
+      "commonsense_qa",
+      "hellaswag",
+      "openbookqa",
+      "piqa",
+      "winogrande"
+    ],
+    "examples": 512,
+    "full_official_suite": false
+  },
+  "runtime": {
+    "backend": "transformers",
+    "transformers": "5.22.1",
+    "torch": "2.15.0+cu132",
+    "device": "cuda",
+    "dtype": "torch.bfloat16",
+    "mps_cpu_fallback": false
+  },
+  "baseline": {
+    "mean": 52.9296875,
+    "benchmarks": {
+      "arc_challenge": 32.8125,
+      "arc_easy": 62.5,
+      "boolq": 65.625,
+      "commonsense_qa": 57.8125,
+      "hellaswag": 48.4375,
+      "openbookqa": 29.6875,
+      "piqa": 70.3125,
+      "winogrande": 56.25
+    }
+  },
+  "lora": {
+    "mean": 56.0546875,
+    "benchmarks": {
+      "arc_challenge": 39.0625,
+      "arc_easy": 70.3125,
+      "boolq": 73.4375,
+      "commonsense_qa": 54.6875,
+      "hellaswag": 51.5625,
+      "openbookqa": 34.375,
+      "piqa": 70.3125,
+      "winogrande": 54.6875
+    },
+    "artifact": {
+      "deltas_sha256": "68b6dfa452168cbc690405af817341a0533bc47439f91df8c482cdc956b1bf39",
+      "strength": 1.0,
+      "norm_gain": 1.0
+    }
+  },
+  "comparison": {
+    "overall": {
+      "baseline_mean": 52.9296875,
+      "candidate_mean": 56.0546875,
+      "diff": 3.125,
+      "ci95": [
+        0.5859375,
+        5.6640625
+      ],
+      "run_worst_case_se": 2.209708691207961,
+      "wins": 30,
+      "losses": 14,
+      "ties": 468,
+      "sign_test_p": 0.022628841205914796,
+      "separable": true
+    },
+    "benchmarks": {
+      "arc_challenge": {
+        "n": 64,
+        "baseline_mean": 32.8125,
+        "candidate_mean": 39.0625,
+        "diff": 6.25,
+        "ci95": [
+          -1.5625,
+          15.625
+        ],
+        "wins": 6,
+        "losses": 2,
+        "ties": 56,
+        "sign_test_p": 0.2890625,
+        "baseline_truncation_rate": 0,
+        "candidate_truncation_rate": 0,
+        "baseline_mean_tokens": 0,
+        "candidate_mean_tokens": 0,
+        "run_worst_case_se": 6.25
+      },
+      "arc_easy": {
+        "n": 64,
+        "baseline_mean": 62.5,
+        "candidate_mean": 70.3125,
+        "diff": 7.8125,
+        "ci95": [
+          0.0,
+          15.625
+        ],
+        "wins": 6,
+        "losses": 1,
+        "ties": 57,
+        "sign_test_p": 0.125,
+        "baseline_truncation_rate": 0,
+        "candidate_truncation_rate": 0,
+        "baseline_mean_tokens": 0,
+        "candidate_mean_tokens": 0,
+        "run_worst_case_se": 6.25
+      },
+      "boolq": {
+        "n": 64,
+        "baseline_mean": 65.625,
+        "candidate_mean": 73.4375,
+        "diff": 7.8125,
+        "ci95": [
+          1.5625,
+          14.0625
+        ],
+        "wins": 5,
+        "losses": 0,
+        "ties": 59,
+        "sign_test_p": 0.0625,
+        "baseline_truncation_rate": 0,
+        "candidate_truncation_rate": 0,
+        "baseline_mean_tokens": 0,
+        "candidate_mean_tokens": 0,
+        "run_worst_case_se": 6.25
+      },
+      "commonsense_qa": {
+        "n": 64,
+        "baseline_mean": 57.8125,
+        "candidate_mean": 54.6875,
+        "diff": -3.125,
+        "ci95": [
+          -12.5,
+          6.25
+        ],
+        "wins": 4,
+        "losses": 6,
+        "ties": 54,
+        "sign_test_p": 0.75390625,
+        "baseline_truncation_rate": 0,
+        "candidate_truncation_rate": 0,
+        "baseline_mean_tokens": 0,
+        "candidate_mean_tokens": 0,
+        "run_worst_case_se": 6.25
+      },
+      "hellaswag": {
+        "n": 64,
+        "baseline_mean": 48.4375,
+        "candidate_mean": 51.5625,
+        "diff": 3.125,
+        "ci95": [
+          -3.125,
+          9.375
+        ],
+        "wins": 3,
+        "losses": 1,
+        "ties": 60,
+        "sign_test_p": 0.625,
+        "baseline_truncation_rate": 0,
+        "candidate_truncation_rate": 0,
+        "baseline_mean_tokens": 0,
+        "candidate_mean_tokens": 0,
+        "run_worst_case_se": 6.25
+      },
+      "openbookqa": {
+        "n": 64,
+        "baseline_mean": 29.6875,
+        "candidate_mean": 34.375,
+        "diff": 4.6875,
+        "ci95": [
+          0.0,
+          10.9375
+        ],
+        "wins": 3,
+        "losses": 0,
+        "ties": 61,
+        "sign_test_p": 0.25,
+        "baseline_truncation_rate": 0,
+        "candidate_truncation_rate": 0,
+        "baseline_mean_tokens": 0,
+        "candidate_mean_tokens": 0,
+        "run_worst_case_se": 6.25
+      },
+      "piqa": {
+        "n": 64,
+        "baseline_mean": 70.3125,
+        "candidate_mean": 70.3125,
+        "diff": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ],
+        "wins": 0,
+        "losses": 0,
+        "ties": 64,
+        "sign_test_p": 1.0,
+        "baseline_truncation_rate": 0,
+        "candidate_truncation_rate": 0,
+        "baseline_mean_tokens": 0,
+        "candidate_mean_tokens": 0,
+        "run_worst_case_se": 6.25
+      },
+      "winogrande": {
+        "n": 64,
+        "baseline_mean": 56.25,
+        "candidate_mean": 54.6875,
+        "diff": -1.5625,
+        "ci95": [
+          -9.375,
+          6.25
+        ],
+        "wins": 3,
+        "losses": 4,
+        "ties": 57,
+        "sign_test_p": 1.0,
+        "baseline_truncation_rate": 0,
+        "candidate_truncation_rate": 0,
+        "baseline_mean_tokens": 0,
+        "candidate_mean_tokens": 0,
+        "run_worst_case_se": 6.25
+      }
+    },
+    "resamples": 10000,
+    "seed": 0
+  },
+  "limitations": [
+    "Not official validation or a private test result.",
+    "No math, IFEval, coding or BFCL in this subset.",
+    "Several hyperparameters and candidate selection can overfit public development results.",
+    "Particle final training and generated math comparisons pending."
+  ]
+}

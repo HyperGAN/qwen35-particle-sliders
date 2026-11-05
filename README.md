@@ -8,6 +8,13 @@ This is a native CUDA experiment in progress. The two-update Qwen smoke run and
 exact patch reconstruction have passed; search and final quality evaluation are
 pending. No official submission or score is claimed.
 
+The first supervised comparator has completed 128 updates. On the fixed 512-row,
+eight-benchmark local likelihood subset, its mean is 56.05% versus 52.93% for the
+parent (+3.13 points; paired bootstrap interval about +0.6 to +5.7, sign-test
+p=0.023). These are development results; generated-answer comparisons and the
+particle final run are pending. The complete aggregate receipt is in
+[evidence/lora-likelihood-v1.json](evidence/lora-likelihood-v1.json).
+
 The particle objective is the actual historical formulation from
 [mikkel/meta-glimmer-particle-slider](https://github.com/mikkel/meta-glimmer-particle-slider):
 one learned 128×4 bank, per-projection rank-8 down/up maps, deterministic
