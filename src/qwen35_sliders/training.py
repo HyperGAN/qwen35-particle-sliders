@@ -9,6 +9,7 @@ from safetensors.torch import save_file
 
 from .data import digest, token_rows, write_json
 from .host import Slider, hidden, distill, linear_deltas
+from .particle import make_game, initialize_ema, update_ema
 
 
 def load_host(workspace, device="cuda"):
@@ -39,11 +40,10 @@ def prepare(model, slider, rows):
 
 
 @torch.no_grad()
-def metrics(model, slider, rows, critic):
+def metrics(model, slider, rows):
     def rms(strength):
         with slider.scaled(strength):
-            return float(torch.cat([critic.normalize(hidden(model, row["ids"])) -
-                        critic.normalize(row["target"]) for row in rows]).square().mean().sqrt())
+            return float(torch.cat([hidden(model, row["ids"]) - row["target"] for row in rows]).square().mean().sqrt())
     return dict(off_rms=rms(0.), on_rms=rms(1.))
 
 
@@ -66,63 +66,45 @@ def train_particle(config, *, runner=None):
     try:
         training = prepare(model, slider, splits["train"])
         development = prepare(model, slider, splits["dev"])
-        target = torch.cat([r["target"] for r in training])
-        neutral = torch.cat([r["neutral"] for r in training])
-        stamp = api.stamp.as_dict()
-        critic_config = {key: stamp["critic_"+key] for key in ("tokens", "width", "layers", "heads", "score_bound")}
-        critic, g, d = api.game.build_game(slider, target, critic=stamp["critic"],
-                                          critic_config=critic_config, neutrals=neutral)
-        critic.noise_decay_steps = stamp["noise_decay_steps"]
-        rate = config.get("lr", stamp["g_lr"])
-        for group in g.param_groups:
-            group["lr"] = rate * (config.get("particle_lr_mult", 10.) if group["role"] == "particles" else 1.)
-        for group in d.param_groups:
-            group["lr"] = rate * config.get("d_lr_mult", 1.5)
-        sampler = api.game.BridgeSampler(len(training), config.get("seed", 7), batch_size=config.get("batch", 4))
-        ema = api.game.initialize_ema(slider)
+        game = make_game(model, slider, training, config, api)
+        ema = initialize_ema(slider)
         contract = dict(config=config, identity=identity, data_sha256=digest(config["data"]),
-                        formulation=stamp, names=slider.names, rows={k:len(v) for k,v in splits.items()})
+                        upstream=api.identity, formulation=game.state_dict()["config"],
+                        names=slider.names, rows={k:len(v) for k,v in splits.items()})
         write_json(output / "contract.json", contract)
-        initial = metrics(model, slider, development, critic)
+        initial = metrics(model, slider, development)
         write_json(output / "initial.json", initial)
         completed = 0
         if config.get("resume"):
-            packet = torch.load(config["resume"], map_location=target.device, weights_only=True)
+            packet = torch.load(config["resume"], map_location=next(slider.parameters()).device, weights_only=True)
             # Output and resume paths are operational; the training recipe must match.
             old = {k:v for k,v in packet["contract"]["config"].items() if k not in {"output", "resume"}}
             new = {k:v for k,v in config.items() if k not in {"output", "resume"}}
-            if old != new or packet["contract"]["data_sha256"] != contract["data_sha256"] or packet["contract"]["identity"] != identity:
+            if old != new or packet["contract"]["data_sha256"] != contract["data_sha256"] or packet["contract"]["identity"] != identity or packet["contract"].get("upstream") != api.identity:
                 raise ValueError("Resume recipe, runtime, data or base differs")
-            slider.load_state_dict(packet["slider"], strict=True)
-            critic.load_state_dict(packet["critic"], strict=True)
-            g.load_state_dict(packet["g"]); d.load_state_dict(packet["d"])
-            sampler.load_state_dict({**packet["sampler"], "rngs": {k:v.cpu() for k,v in packet["sampler"]["rngs"].items()}})
+            if "game" not in packet:
+                raise ValueError("Historical particle checkpoints require their original environment")
+            game.load_state_dict(packet["game"])
             ema = packet["ema"]
-            torch.set_rng_state(packet["torch_rng"].cpu())
-            torch.cuda.set_rng_state_all([x.cpu() for x in packet["cuda_rng"]])
             completed = packet["step"]
         def checkpoint(step):
-            packet = dict(contract=contract, step=step, slider=slider.state_dict(), critic=critic.state_dict(),
-                          g=g.state_dict(), d=d.state_dict(), sampler=sampler.state_dict(), ema=ema,
-                          torch_rng=torch.get_rng_state(), cuda_rng=torch.cuda.get_rng_state_all())
+            packet = dict(contract=contract, step=step, game=game.state_dict(), ema=ema)
             temporary = output / "continuation.tmp"
             torch.save(packet, temporary)
             temporary.replace(output / "continuation.pt")
         with (output / "metrics.jsonl").open("a") as stream:
             for step in range(completed, config["steps"]):
-                def predict(index, phase):
-                    with slider.scaled(1.):
-                        return critic.normalize(hidden(model, training[index]["ids"]))
-                record = api.game.update(slider, critic, g, d, target, predict, sampler=sampler, step=step)
-                api.game.update_ema(ema, slider)
+                record = game.step()
+                update_ema(ema, slider)
+                record["particle_grad_norm"] = float(slider.particles.grad.norm())
                 record.update(step=step+1, elapsed_seconds=time.monotonic()-start)
                 stream.write(json.dumps(record, allow_nan=False)+"\n"); stream.flush()
                 if (step+1) % config.get("checkpoint_every", 16) == 0 or step+1 == config["steps"]:
                     checkpoint(step+1)
-                    print(json.dumps({k:record[k] for k in ("step", "g_adv", "d_loss", "particle_gan_grad_norm", "elapsed_seconds")}), flush=True)
-        raw_metrics = metrics(model, slider, development, critic)
+                    print(json.dumps({k:record[k] for k in ("step", "g_adv", "d_loss", "particle_grad_norm", "elapsed_seconds")}), flush=True)
+        raw_metrics = metrics(model, slider, development)
         with state(slider, ema):
-            ema_metrics = metrics(model, slider, development, critic)
+            ema_metrics = metrics(model, slider, development)
         # Selection uses disjoint training-source development data, not the public test suite.
         use_ema = ema_metrics["on_rms"] < raw_metrics["on_rms"]
         if use_ema:
@@ -136,10 +118,10 @@ def train_particle(config, *, runner=None):
         slider.close()
         slider = Slider(model, scope=config.get("scope", "all"), ordinary=True)
         slider.load_state_dict(student, strict=True)
-        student_metrics = metrics(model, slider, development, critic)
+        student_metrics = metrics(model, slider, development)
         deltas = linear_deltas(slider)
         save_file(deltas, str(output / "deltas.safetensors"))
-        result = dict(kind="particle-distilled", steps=config["steps"], raw=raw_metrics, ema=ema_metrics,
+        result = dict(kind="particle-distilled", upstream=api.identity, metric="raw_hidden_rms", steps=config["steps"], raw=raw_metrics, ema=ema_metrics,
                       selected="ema" if use_ema else "raw", student=student_metrics, initial=initial,
                       targets=names, elapsed_seconds=time.monotonic()-start,
                       deltas_sha256=digest(output / "deltas.safetensors"))

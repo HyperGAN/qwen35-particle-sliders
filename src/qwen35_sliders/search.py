@@ -25,7 +25,9 @@ def search(spec):
                 subprocess.run([sys.executable, "-m", "qwen35_sliders.cli", "train-particle", str(path)],
                                stdout=log, stderr=subprocess.STDOUT, check=True)
         result = json.loads(result_path.read_text())
-        # Compare on the same fixed dev states under each training-only normalizer.
+        if result.get("upstream", {}).get("particlegan_version") != "0.9.5" or result.get("metric") != "raw_hidden_rms":
+            raise ValueError("Cached search result belongs to another engine; use a fresh output directory")
+        # Compare raw held-out hidden errors on the same fixed development rows.
         ratio = result["student"]["on_rms"] / result["student"]["off_rms"]
         records.append(dict(index=index, config=config, result=result, student_relative_rms=ratio))
         write_json(root / "search-results.json", records)

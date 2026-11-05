@@ -9,6 +9,11 @@ achieved that yet. Nothing has been submitted to Delta League, and the research
 PR is closed.** The last training run has finished; no training job is currently
 running from this project session.
 
+Current training code uses **ParticleGAN 0.9.5 through the shared
+[particle-sliders core](https://github.com/HyperGAN/particle-sliders)**. The
+results below belong to the earlier v0.1.0 experiment; the dependency update does
+not establish a new model result.
+
 ## What is a slider?
 
 A slider adds small trainable modules, called **adapters**, inside an existing
@@ -35,8 +40,9 @@ adapter uses the model's intermediate values to choose how to mix information
 from that bank. This lets its adjustment depend on the input, rather than
 always applying the same linear transformation.
 
-We use the ParticleGAN training method from
-[the Glimmer particle-slider project](https://github.com/mikkel/meta-glimmer-particle-slider).
+The shared [particle-sliders](https://github.com/HyperGAN/particle-sliders) engine
+uses ParticleGAN's training recipe. The routed adapter architecture was adapted
+from [the Glimmer particle-slider project](https://github.com/mikkel/meta-glimmer-particle-slider).
 A GAN is a training setup in which one network learns an adjustment and another,
 called a **critic**, learns to detect the remaining error.
 
@@ -77,7 +83,7 @@ results are retained in the [experiment record](evidence/final-experiment.json).
 
 ## What did we train, and did it work?
 
-We tried four particle-training settings for 32 updates each, then trained a
+In the earlier v0.1.0 experiment, we tried four particle-training settings for 32 updates each, then trained a
 fresh particle slider for 256 updates using the selected setting. The settings
 were selected by internal-representation matching, not by demonstrated answer
 quality. The data came from a small GSM8K training subset: 125 retained training

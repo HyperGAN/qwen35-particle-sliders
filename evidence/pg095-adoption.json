@@ -1,0 +1,44 @@
+{
+  "schema": "qwen35-pg095-adoption-v1",
+  "status": "dependency and shared-engine adoption verified on CPU; native quality unmeasured",
+  "shared_core": {
+    "version": "0.13.0",
+    "revision": "3dd672a7f9b8c169daef90fd63e4bb42b9ddc423",
+    "repository": "https://github.com/HyperGAN/particle-sliders"
+  },
+  "particlegan": {
+    "version": "0.9.5",
+    "release_commit": "1b8355b184b21bb7d81104ee590813c262f6df0a",
+    "wheel_sha256": "c1c0de7a635ac1b1634ba158eed050b6f6aed993e01f9b463435430c77d846ae",
+    "python_sources_sha256": "d452f7c3277be32ab40cf4b45478dcf8cfb62b994e693184e278e8e2f4c5fc26"
+  },
+  "validation": {
+    "shared_core_suite": {
+      "passed": 584,
+      "skipped": 27
+    },
+    "final_changed_core_contracts": {
+      "passed": 51
+    },
+    "qwen_integration": {
+      "passed": 3,
+      "includes": [
+        "real public-recipe GAN updates",
+        "frozen base and exact zero-strength behavior",
+        "bitwise matching exported adapters after interrupted/resumed training",
+        "distillation and merged-model equivalence"
+      ]
+    },
+    "core_and_qwen_wheel_builds": "passed",
+    "qwen_cli_commands": "unchanged"
+  },
+  "generation_boundary": {
+    "new_recipe": "public bispf_optimized",
+    "historical_recipe": "PG82 paired-error RpGAN/b_cap/VIC",
+    "old_checkpoints": "require original environment; no migration",
+    "historical_results": "v0.1.0 metrics are not 0.9.5 quality evidence"
+  },
+  "native_training_launched": false,
+  "new_native_benchmark_result": null,
+  "deltaleague_submission": null
+}

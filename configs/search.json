@@ -1,9 +1,8 @@
 {
-  "output": "/ml2/deltaleague/runs/particle-search-v1",
+  "output": "/ml2/deltaleague/runs/particle-search-pg095-v2",
   "base": {
     "workspace": "/ml2/deltaleague/experiment",
     "data": "/ml2/deltaleague/data/gsm-v1.json",
-    "upstream": "/ml2/deltaleague/particle-legacy",
     "scope": "all",
     "device": "cuda",
     "seed": 7,
@@ -14,10 +13,26 @@
     "checkpoint_every": 16
   },
   "trials": [
-    {"lr": 0.0001, "d_lr_mult": 1.5, "particle_lr_mult": 10.0},
-    {"lr": 0.0003, "d_lr_mult": 1.5, "particle_lr_mult": 10.0},
-    {"lr": 0.0006, "d_lr_mult": 1.5, "particle_lr_mult": 10.0},
-    {"lr": 0.0003, "d_lr_mult": 0.75, "particle_lr_mult": 2.5}
+    {
+      "lr": 0.0001,
+      "d_lr_mult": 1.5,
+      "particle_lr_mult": 10.0
+    },
+    {
+      "lr": 0.0003,
+      "d_lr_mult": 1.5,
+      "particle_lr_mult": 10.0
+    },
+    {
+      "lr": 0.0006,
+      "d_lr_mult": 1.5,
+      "particle_lr_mult": 10.0
+    },
+    {
+      "lr": 0.0003,
+      "d_lr_mult": 0.75,
+      "particle_lr_mult": 2.5
+    }
   ],
   "final_steps": 256
 }
