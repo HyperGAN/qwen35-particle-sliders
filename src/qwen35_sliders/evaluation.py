@@ -29,10 +29,11 @@ def prepare_tasks(workspace, names, limit=None):
     manager = TaskManager()
     tasks, samples, identities = [], {}, {}
     for name in names:
-        selection = manifest["text"][name]["selection"]
-        if set(selection) != {name}:
-            raise ValueError("This local comparison requires individual likelihood tasks")
-        selected = selection[name]
+        matches = [group["selection"][name] for group in manifest["text"].values()
+                   if name in group["selection"]]
+        if len(matches) != 1:
+            raise ValueError("Individual task must occur exactly once in public selection: " + name)
+        selected = matches[0]
         # The index keeps !function values as strings; execute the same pinned
         # YAML loader as the real task factory before instantiating tasks.
         config = copy.deepcopy(load_yaml(manager.task_index[name].yaml_path, resolve_func=True))
@@ -75,7 +76,10 @@ def evaluate(workspace, output, *, deltas=None, strength=1., norm_gain=1.,
     if digest(root / "validation.json") != config["validation_sha256"]:
         raise ValueError("Official manifest was modified")
     names = names or DEFAULT_TASKS
-    tasks, samples, selected = prepare_tasks(root, names, limit)
+    suite = json.loads((root / "validation.json").read_text())
+    owners = {task:group for group in names for task in suite["text"][group]["selection"]}
+    individual = list(owners)
+    tasks, samples, selected = prepare_tasks(root, individual, limit)
     runner, provenance = load_host(root, device)
     with torch.no_grad():
         parameters = dict(runner.model.named_parameters())
@@ -91,23 +95,26 @@ def evaluate(workspace, output, *, deltas=None, strength=1., norm_gain=1.,
     result = evaluator.simple_evaluate(model=model, tasks=tasks, samples=samples, batch_size=batch,
         apply_chat_template=False, random_seed=0, numpy_random_seed=1234, torch_random_seed=1234,
         fewshot_random_seed=1234, bootstrap_iters=1000, log_samples=True)
-    rows, components = [], {}
-    for name in names:
+    rows, scores = [], {name:[] for name in names}
+    for name in individual:
         metric = "acc_norm" if "acc_norm" in result["samples"][name][0] else "acc"
         component_rows = []
         for record in result["samples"][name]:
             score = float(record[metric])
-            row = dict(benchmark=name, example_index=int(record["doc_id"]), sample=0,
+            group = owners[name]
+            index = int(record["doc_id"]) if group == name else name + ":" + str(record["doc_id"])
+            row = dict(benchmark=group, example_index=index, sample=0,
                        score=score, truncated=False, tokens=0, metric=metric)
             rows.append(row); component_rows.append(score)
         if len(component_rows) != len(samples[name]):
             raise ValueError("Evaluation coverage differs from requested public selection")
-        components[name] = statistics.mean(component_rows) * 100
+        scores[owners[name]].extend(component_rows)
+    components = {name:statistics.mean(values)*100 for name,values in scores.items()}
     with output.with_suffix(".generations.jsonl").open("x") as stream:
         # Only per-example metric records, without prompts or generation text.
         for row in rows:
             stream.write(json.dumps(row)+"\n")
-    protocol = dict(selected=selected, chat_template=False, max_length=2048, task_metrics={n: "acc_norm" if "acc_norm" in result["samples"][n][0] else "acc" for n in names})
+    protocol = dict(selected=selected, chat_template=False, max_length=2048, task_metrics={n: "acc_norm" if "acc_norm" in result["samples"][n][0] else "acc" for n in individual})
     report = dict(schema="qwen35-local-likelihood-advisory-v1", model_id=identity["model_id"],
         config_id=config["id"], source_version_id=metadata["id"], validation_sha256=hashlib.sha256(json.dumps(protocol,sort_keys=True).encode()).hexdigest(),
         official_manifest_sha256=config["validation_sha256"], generation=dict(kind="native-likelihood", chat_template=False),

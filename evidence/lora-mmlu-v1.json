@@ -1,0 +1,30 @@
+{
+  "status": "advisory native MMLU likelihood selection",
+  "baseline": 47.368421052631575,
+  "lora": 45.614035087719294,
+  "coverage": {
+    "benchmarks": [
+      "mmlu"
+    ],
+    "examples": 114,
+    "full_official_suite": false
+  },
+  "protocol_sha256": "4faf40bb4b13593684f527f6789646beca5accb07716af048dd13f17c6a2e35c",
+  "official_manifest_sha256": "996573d687b0d0f1e088f1e918cd153fa0f80cff454a7e9a7ab5ac2eb374d4d2",
+  "comparison": {
+    "baseline_mean": 47.368421052631575,
+    "candidate_mean": 45.614035087719294,
+    "diff": -1.7543859649122806,
+    "ci95": [
+      -8.771929824561404,
+      5.2631578947368425
+    ],
+    "run_worst_case_se": 4.68292905790847,
+    "wins": 7,
+    "losses": 9,
+    "ties": 98,
+    "sign_test_p": 0.803619384765625,
+    "separable": false
+  },
+  "note": "All114 selected public MMLU examples, two per subject; verified document hashes/revisions."
+}

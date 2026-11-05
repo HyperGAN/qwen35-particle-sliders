@@ -1,0 +1,24 @@
+{
+  "schema": "qwen35-loaded-submission-verification-v1",
+  "parent_version_id": "0ea62f40-7cd8-4d98-9ebb-484192fa05eb",
+  "identity_hash": "96336424b3b32c1b39d0ea157a559e148930a51bb019333b7bf6614391cfb025",
+  "canonical_parent_content_hash": "708085f8b44fa704601967f3f771b8ec133d9c91dc4f49bd8c7686bd47d537b8",
+  "canonical_candidate_content_hash": "a239ac71468fc7402b210ebd006d2dc15ad7e1d6adb69131363823d25fa833c8",
+  "artifact_sha256": "4e142fcd549a1fd9046245cd8f0e11048ef8c48ebb9ff853afc619e72a19c2b3",
+  "reconstructed_weights_sha256": "6ae5f7610be1c986614daebdcd48f1e5c143f1a501b0f74f7e22579e47afb2b7",
+  "direct_deltas_sha256": "68b6dfa452168cbc690405af817341a0533bc47439f91df8c482cdc956b1bf39",
+  "strength": 1.0,
+  "norm_gain": 1.0,
+  "exact_loaded_logits": true,
+  "probe_count": 3,
+  "changed_prefix": "model.language_model.",
+  "runtime": {
+    "backend": "transformers",
+    "transformers": "5.22.1",
+    "torch": "2.15.0+cu132",
+    "device": "cuda",
+    "dtype": "torch.bfloat16",
+    "mps_cpu_fallback": false
+  },
+  "note": "Probes verify serialization and load equivalence; they are not capability evaluations."
+}

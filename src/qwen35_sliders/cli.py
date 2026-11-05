@@ -23,6 +23,12 @@ def main():
     export.add_argument("--output", required=True)
     export.add_argument("--strength", type=float, default=1.)
     export.add_argument("--norm-gain", type=float, default=1.)
+    verify = commands.add_parser("verify-candidate")
+    verify.add_argument("--workspace", required=True)
+    verify.add_argument("--deltas", required=True)
+    verify.add_argument("--patch", required=True)
+    verify.add_argument("--strength", type=float, default=1.)
+    verify.add_argument("--norm-gain", type=float, default=1.)
     evaluate = commands.add_parser("evaluate-likelihood")
     evaluate.add_argument("--workspace", required=True)
     evaluate.add_argument("--output", required=True)
@@ -49,6 +55,10 @@ def main():
     elif args.command == "build":
         from .export import build
         print(json.dumps(build(args.workspace, args.deltas, args.output, strength=args.strength, norm_gain=args.norm_gain), indent=2))
+    elif args.command == "verify-candidate":
+        from .verification import verify_candidate
+        print(json.dumps(verify_candidate(args.workspace, args.deltas, args.patch,
+            strength=args.strength, norm_gain=args.norm_gain), indent=2))
     elif args.command == "evaluate-likelihood":
         from .evaluation import evaluate
         print(json.dumps(evaluate(args.workspace, args.output, deltas=args.deltas,

@@ -1,0 +1,42 @@
+{
+  "status": "advisory zero-shot GSM8K screen",
+  "coverage": {
+    "examples": 16,
+    "full_official_suite": false
+  },
+  "generation": {
+    "top_k": 20,
+    "top_p": 0.95,
+    "max_tokens": 1024,
+    "temperature": 1.0,
+    "max_num_seqs": 32,
+    "max_model_len": 34816,
+    "enable_thinking": true,
+    "presence_penalty": 1.5
+  },
+  "prompt": "Native Qwen user-question chat, zero few-shot examples; official task declares five.",
+  "baseline": {
+    "score": 25.0,
+    "truncation_rate": 1
+  },
+  "lora": {
+    "score": 12.5,
+    "truncation_rate": 0
+  },
+  "comparison": {
+    "baseline_mean": 25.0,
+    "candidate_mean": 12.5,
+    "diff": -12.5,
+    "ci95": [
+      -37.5,
+      12.5
+    ],
+    "run_worst_case_se": 12.5,
+    "wins": 1,
+    "losses": 3,
+    "ties": 12,
+    "sign_test_p": 0.625,
+    "separable": false
+  },
+  "limitation": "16 examples, 1024-token cap, all baseline rows truncated; not an official benchmark reproduction."
+}

@@ -1,0 +1,21 @@
+{
+  "schema": "qwen35-package-parity-v1",
+  "source_modules": {
+    "__init__.py": "24c09fc9ff6ab3cd8f389f6968d48c43ed51a69044a606fca3a51a192c8f43b7",
+    "cli.py": "844f47e7aece405c4461cfd7529cbb2ac7dc3a4f107f4c163badb143f09a6f34",
+    "data.py": "16f758788721ef39476dcac751535c906d1b5bee9b77550e3e9f713ff026ef24",
+    "evaluation.py": "dfd5a50754cf5246a184f94b5f62ac89bc272e19f23c8439922a48ff02a74a81",
+    "export.py": "8a5da1c12d1ce48a72395386f6d171a5eb4ce7e7c3b0a1532099713df69f956d",
+    "host.py": "c28c7d2a4d889d050849318493fcdc7b74e7b6b1e6fb0c322d5b935b4a50ef5d",
+    "math_evaluation.py": "d2d15df8ac96a8fd95314e9d5fa907b8a285ad58071412d3ede4ee515a5b95a1",
+    "search.py": "f0cb6f957f57b0368c17aa26a792ec2e028492320e5e68c23f281573fe62b1dc",
+    "training.py": "a2b602cee34159bb37f4962129ed4d13513019b7b2e8bb2f8936205ebf9edcde",
+    "upstream.py": "ad81b7f51394db2cbc43c00671d58064311f4cdef88420b814a2e717770a5259",
+    "verification.py": "2337c405adaf124c494d9f7805215d32c9c26a2e30b07019147c12c5d18fe18e"
+  },
+  "wheel_sha256": "eb9a3c304fa40527de62d76f706e595e91b68a88e44539bb4731aaf619518f9e",
+  "sdist_sha256": "5849313a681b22bc8eb0fc749f8a90b01c27aa4e6f4eeac49bea7ac5d7cef928",
+  "source_wheel_sdist_parity": true,
+  "installed_tests": "..                                                                       [100%]\n2 passed in 2.20s",
+  "scope": "Installed CPU fixtures; native model and candidate checks are separate receipts."
+}

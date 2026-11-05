@@ -11,9 +11,18 @@ pending. No official submission or score is claimed.
 The first supervised comparator has completed 128 updates. On the fixed 512-row,
 eight-benchmark local likelihood subset, its mean is 56.05% versus 52.93% for the
 parent (+3.13 points; paired bootstrap interval about +0.6 to +5.7, sign-test
-p=0.023). These are development results; generated-answer comparisons and the
-particle final run are pending. The complete aggregate receipt is in
+p=0.023). A 16-example, zero-shot GSM8K screen at a 1,024-token cap instead
+scored parent 4/16 and LoRA 2/16, with every parent generation truncated and no
+LoRA truncations. That difference is inconclusive (paired interval -37.5 to
++12.5 points). These are development results; the particle final run and broader
+comparison are pending. The first aggregate receipt is in
 [evidence/lora-likelihood-v1.json](evidence/lora-likelihood-v1.json).
+
+Adding all 114 manifest-selected MMLU examples gives parent 47.37% versus LoRA
+45.61% on MMLU. The nine-task likelihood mean is parent 52.31% versus LoRA
+54.89%; the combined comparison is not separable by the CLI's joint bootstrap
+and sign-test criterion (sign-test p=0.092). The broader result and negative
+math screen are retained when choosing the final candidate.
 
 The particle objective is the actual historical formulation from
 [mikkel/meta-glimmer-particle-slider](https://github.com/mikkel/meta-glimmer-particle-slider):
@@ -53,7 +62,7 @@ uv venv --python 3.12 .venv
 uv pip install --python .venv/bin/python -e '.[test]'
 . .venv/bin/activate
 delta competition init qwen35-08b-v1 --output experiment
-curl -fL https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/train.jsonl -o gsm8k-train.jsonl
+curl -fL https://raw.githubusercontent.com/openai/grade-school-math/b0bb162abedc65e1fdd8e93ed090fd7598ee68bc/grade_school_math/data/train.jsonl -o gsm8k-train.jsonl
 qwen35-slider prepare-gsm gsm8k-train.jsonl data/gsm-v1.json
 ```
 
@@ -87,6 +96,8 @@ qwen35-slider build --workspace experiment \
   --deltas runs/particle-search-v1/final/deltas.safetensors \
   --strength 1 --output runs/submission
 delta validate runs/submission
+qwen35-slider verify-candidate --workspace experiment \
+  --deltas runs/particle-search-v1/final/deltas.safetensors --patch runs/submission
 ```
 
 The supervised comparator uses the same source/splits and selected projections,
@@ -100,6 +111,10 @@ Resume requires the original recipe, base, data and runtime identity. Export
 builds an official `dense-diff`/`replace` manifest, reconstructs it using the
 official CLI implementation, and checks every reconstructed tensor against the
 expected merged checkpoint. Unchanged tensors and registered dtypes are checked.
+`verify-candidate` additionally checks the canonical parent/content identity and
+loads the actual patch through the official reconstruction path. It requires
+bitwise identical logits to the direct-delta candidate on three fixed probes.
+This checks the exported artifact against the model used for local evaluation.
 
 `--norm-gain` optionally tests a separately recorded final-logit gain. Qwen's
 RMSNorm parameter is an offset, so the implementation scales `(1 + weight)` and
@@ -139,7 +154,9 @@ The per-example comparison records contain metric values rather than generated
 text. Their protocol hash is separate from the unchanged official manifest hash.
 The math command separately verifies the selected public GSM8K document hashes
 and generates up to 1,024 tokens on 16 examples by default, with the registered
-thinking/sampling settings and seed 1000. It reports truncation explicitly.
+thinking/sampling settings and seed 1000. Its user-question chat prompts are
+zero-shot; the suite's native GSM8K task declares five few-shot examples. It
+reports truncation explicitly and does not reproduce that full native protocol.
 `--teacher` can load the nonlinear particle artifact for a teacher/student check.
 Raw math generations remain local and are excluded from Git.
 
