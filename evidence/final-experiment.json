@@ -1,6 +1,6 @@
 {
   "schema": "qwen35-final-experiment-v1",
-  "status": "completed local training/evaluation; ready artifacts; no official submission",
+  "status": "experimental artifacts; no demonstrated win over base; not ready to submit",
   "implementation_revision": "45ec4a4fb44bd450b087f4e1926adaca2068b62d",
   "research_pr": "https://github.com/ilblackdragon/deltaleague/pull/13",
   "model_id": "qwen35-08b-v1",
@@ -358,7 +358,7 @@
     "strength": 0.5,
     "norm_gain": 1.0,
     "artifact_sha256": "7c19870c30cfb09587ea0c26c2f9d27537dfdc9ea6281da297d0197682a1ec84",
-    "reason": "Preserved selected MMLU and higher capped math accuracy than full-strength LoRA; exploratory balanced preference."
+    "reason": "Historical exploratory candidate selection only; superiority over base is not established and submission is not recommended."
   },
   "release_package": {
     "archive_sha256": "034a9041267b2584c0832c86a8bce3b7cf2099ae4b0219055bf2c88d6634c1a3",
@@ -375,5 +375,11 @@
     "Hidden-state matching and calibration error do not establish capability improvement.",
     "Historical PG82 native Qwen cohort; modern PG094 Glimmer admission not claimed.",
     "Adapters train through the full BF16 text model; this is not full-parameter SFT."
-  ]
+  ],
+  "submission_gate": {
+    "status": "not_met",
+    "requirement": "Do not submit unless we win against base under matched evaluation conditions.",
+    "research_pr_status": "closed; do not reopen",
+    "actual_submission": "none"
+  }
 }

@@ -6,10 +6,12 @@ replacement patches. A separate supervised LoRA provides a practical comparator.
 
 The bounded native CUDA experiment is complete: four hyperparameter trials,
 a 256-update particle final, ridge distillation, a 128-update supervised LoRA,
-and local public comparisons. The preferred first submission is **supervised
-LoRA at strength 0.5**. The particle teacher and student remain experimental.
+and local public comparisons. **No candidate is ready to submit.** The particle
+candidate scored lower locally, and the broader supervised LoRA comparisons are
+inconclusive. Submission requires a demonstrated win over the base under matched
+evaluation conditions. The research PR is closed; it must remain closed.
 
-**[Download the submission bundle and trained adapters](https://github.com/HyperGAN/qwen35-particle-sliders/releases/tag/v0.1.0)** ·
+**[Experimental artifacts and trained adapters](https://github.com/HyperGAN/qwen35-particle-sliders/releases/tag/v0.1.0)** ·
 **[Research record and reproduction](https://github.com/ilblackdragon/deltaleague/pull/13)**
 
 | Candidate | Nine-task likelihood mean (626 examples) | Zero-shot GSM8K (16 examples) |
@@ -25,7 +27,8 @@ The math screen uses a 1,024-token cap and zero-shot user-question chat, whereas
 the native suite declares five few-shot examples and an 8,192-token cap. All
 parent/particle outputs were truncated; neither supervised variant truncated.
 Half strength preserves the parent's selected MMLU score and gives the better
-math screen among the supervised variants, motivating the balanced preference.
+math screen among the supervised variants. That does not establish a win over
+the base or justify submission.
 The nonlinear particle teacher separately scored 1/4 on the first four math
 examples, versus 0/4 for its student on those same rows; both truncated every
 output. This small check does not establish a teacher-quality advantage.
