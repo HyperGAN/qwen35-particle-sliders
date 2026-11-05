@@ -14,6 +14,10 @@ Current training code uses **ParticleGAN 0.9.5 through the shared
 results below belong to the earlier v0.1.0 experiment; the dependency update does
 not establish a new model result.
 
+See the [current goal and metric guide](docs/goal-and-metrics.md) for the remaining
+work, which numbers are lower-is-better, and how to compare a promising slider
+ON versus OFF on answer quality.
+
 ## What is a slider?
 
 A slider adds small trainable modules, called **adapters**, inside an existing
