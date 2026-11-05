@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "qwen35-particle-sliders"
-version = "0.2.1"
+version = "0.2.2"
 description = "Qwen3.5 particle teachers, distilled weight edits, and Delta League experiments"
 requires-python = ">=3.12"
 dependencies = [

@@ -57,6 +57,12 @@ regularizers, random streams and moving-average adapter state. Old-version or
 mismatched-source checkpoints are refused. `particle_grad_norm` includes the
 public prior regularizer; it is not labelled an adversarial-only gradient.
 
+The contract also records the product implementation hashes and the development
+token/target identity. Results include raw double-precision ON/OFF SSE and RMS,
+the number of compared values, completed steps and the contract's SHA256. Search
+reuse checks these identities and the exact saved recipe before accepting a
+cached result. All trials and the final must share the same OFF comparison.
+
 ## Export and verify
 
 The particle teacher's nonlinear routing cannot merge exactly into model weights.

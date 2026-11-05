@@ -30,6 +30,10 @@ model's error, on the same development questions and target states:
 student_relative_rms = student ON_RMS / student OFF_RMS
 ```
 
+Selection uses the lowest raw held-out student SSE after verifying that every
+trial has the same development targets, base model, dimensions and OFF error.
+Under those conditions, SSE and the printed RMS ratio give the same ranking.
+
 | Value | Meaning |
 | --- | --- |
 | Less than `1` | ON matches the internal training target better than OFF. |
@@ -40,6 +44,9 @@ For example, OFF RMS `2.0` and ON RMS `1.6` give a ratio of `0.8`: 20% less RMS
 error. This is an illustrative example, not a measured result.
 
 `on_rms` and `off_rms` in each run's `result.json` are also lower-is-better.
+The same record includes `on_sse`, `off_sse` and `compared_values`, so the raw
+error totals and their relationship to RMS can be checked directly. Errors are
+accumulated in double precision for reporting; this does not change training.
 `raw` is the trained particle teacher, `ema` is its moving-average version, and
 `student` is the linear approximation fitted for weight export. `selected` says
 which teacher state was saved; EMA is selected only if its development error is
@@ -58,6 +65,10 @@ when their base model, development examples, target construction, dimensions
 and raw metric definition match. Their OFF baseline should agree. Do not compare
 absolute errors from the old normalized metric with the current raw metric.
 If OFF error is zero, the ratio is undefined and must not be used for ranking.
+The search refuses cached results from changed recipes, data or implementation
+files, incomplete training horizons, or a different OFF baseline. A result is
+bound to its saved contract by SHA256. Use a fresh output directory after a
+source or recipe change; old results are preserved rather than relabelled.
 
 **A lower hidden-state error is a screening signal, not a benchmark win.**
 Generator and critic losses (`g_adv`, `d_loss`) are training diagnostics; their

@@ -1,5 +1,6 @@
 """Upstream GAN callbacks and a separately labelled supervised LoRA baseline."""
 from contextlib import contextmanager
+import hashlib
 import json
 from pathlib import Path
 import time
@@ -10,6 +11,24 @@ from safetensors.torch import save_file
 from .data import digest, token_rows, write_json
 from .host import Slider, hidden, distill, linear_deltas
 from .particle import make_game, initialize_ema, update_ema
+
+
+def implementation_identity():
+    root = Path(__file__).parent
+    return {name: digest(root / name) for name in
+            ("training.py", "host.py", "particle.py", "data.py", "upstream.py")}
+
+
+def prepared_identity(rows):
+    values = []
+    for row in rows:
+        entry = {key: row[key] for key in ("ids", "positive_ids")}
+        for key in ("neutral", "target"):
+            value = row[key].detach().float().cpu().contiguous()
+            entry[key] = dict(shape=list(value.shape),
+                sha256=hashlib.sha256(value.numpy().tobytes()).hexdigest())
+        values.append(entry)
+    return hashlib.sha256(json.dumps(values, sort_keys=True).encode()).hexdigest()
 
 
 def load_host(workspace, device="cuda"):
@@ -41,10 +60,19 @@ def prepare(model, slider, rows):
 
 @torch.no_grad()
 def metrics(model, slider, rows):
-    def rms(strength):
+    def error(strength):
         with slider.scaled(strength):
-            return float(torch.cat([hidden(model, row["ids"]) - row["target"] for row in rows]).square().mean().sqrt())
-    return dict(off_rms=rms(0.), on_rms=rms(1.))
+            differences = torch.cat([hidden(model, row["ids"]) - row["target"] for row in rows])
+            if not torch.isfinite(differences).all():
+                raise FloatingPointError("Nonfinite held-out hidden error")
+            squared = differences.double().square()
+            return float(squared.mean().sqrt()), float(squared.sum()), differences.numel()
+    off_rms, off_sse, count = error(0.)
+    on_rms, on_sse, on_count = error(1.)
+    if count != on_count:
+        raise ValueError("ON/OFF response dimensions differ")
+    return dict(off_rms=off_rms, on_rms=on_rms, off_sse=off_sse, on_sse=on_sse,
+                compared_values=count, rows=len(rows))
 
 
 def train_particle(config, *, runner=None):
@@ -70,23 +98,28 @@ def train_particle(config, *, runner=None):
         ema = initialize_ema(slider)
         contract = dict(config=config, identity=identity, data_sha256=digest(config["data"]),
                         upstream=api.identity, formulation=game.state_dict()["config"],
+                        implementation=implementation_identity(),
+                        development_sha256=prepared_identity(development),
                         names=slider.names, rows={k:len(v) for k,v in splits.items()})
-        write_json(output / "contract.json", contract)
-        initial = metrics(model, slider, development)
-        write_json(output / "initial.json", initial)
         completed = 0
         if config.get("resume"):
             packet = torch.load(config["resume"], map_location=next(slider.parameters()).device, weights_only=True)
             # Output and resume paths are operational; the training recipe must match.
             old = {k:v for k,v in packet["contract"]["config"].items() if k not in {"output", "resume"}}
             new = {k:v for k,v in config.items() if k not in {"output", "resume"}}
-            if old != new or packet["contract"]["data_sha256"] != contract["data_sha256"] or packet["contract"]["identity"] != identity or packet["contract"].get("upstream") != api.identity:
+            if old != new or any(packet["contract"].get(key) != contract[key] for key in
+                    ("data_sha256", "identity", "upstream", "implementation", "development_sha256")):
                 raise ValueError("Resume recipe, runtime, data or base differs")
             if "game" not in packet:
                 raise ValueError("Historical particle checkpoints require their original environment")
             game.load_state_dict(packet["game"])
             ema = packet["ema"]
             completed = packet["step"]
+            if completed != game.completed_steps:
+                raise ValueError("Checkpoint step differs from the actual shared-game step")
+        write_json(output / "contract.json", contract)
+        initial = dict(step=completed, **metrics(model, slider, development))
+        write_json(output / "initial.json", initial)
         def checkpoint(step):
             packet = dict(contract=contract, step=step, game=game.state_dict(), ema=ema)
             temporary = output / "continuation.tmp"
@@ -121,9 +154,11 @@ def train_particle(config, *, runner=None):
         student_metrics = metrics(model, slider, development)
         deltas = linear_deltas(slider)
         save_file(deltas, str(output / "deltas.safetensors"))
-        result = dict(kind="particle-distilled", upstream=api.identity, metric="raw_hidden_rms", steps=config["steps"], raw=raw_metrics, ema=ema_metrics,
+        result = dict(kind="particle-distilled", upstream=api.identity, metric="raw_hidden_rms",
+                      steps=config["steps"], completed_steps=game.completed_steps, raw=raw_metrics, ema=ema_metrics,
                       selected="ema" if use_ema else "raw", student=student_metrics, initial=initial,
                       targets=names, elapsed_seconds=time.monotonic()-start,
+                      contract_sha256=digest(output / "contract.json"),
                       deltas_sha256=digest(output / "deltas.safetensors"))
         write_json(output / "result.json", result)
         return result
