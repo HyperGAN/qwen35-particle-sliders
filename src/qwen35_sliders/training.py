@@ -16,7 +16,7 @@ from .particle import make_game, initialize_ema, update_ema
 def implementation_identity():
     root = Path(__file__).parent
     return {name: digest(root / name) for name in
-            ("training.py", "host.py", "particle.py", "data.py", "upstream.py")}
+            ("training.py", "host.py", "particle.py", "data.py", "upstream.py", "pair_cache.py", "teacher_data.py")}
 
 
 def prepared_identity(rows):
@@ -52,10 +52,20 @@ def state(slider, values):
 
 
 @torch.no_grad()
-def prepare(model, slider, rows):
+def prepare(model, slider, rows, pair_cache=None):
     with slider.scaled(0.):
-        return [dict(**row, neutral=hidden(model, row["ids"]).detach(),
-                     target=hidden(model, row["positive_ids"]).detach()) for row in rows]
+        if model.training or any(p.requires_grad for p in model.parameters()):
+            raise ValueError("Prepare paired targets only from the frozen model in evaluation mode")
+        result = []
+        for row in rows:
+            def calculate():
+                return hidden(model, row["ids"]).detach(), hidden(model, row["positive_ids"]).detach()
+            if pair_cache is None:
+                neutral, target = calculate()
+            else:
+                neutral, target = pair_cache.get_pair(row, calculate, next(model.parameters()).device)
+            result.append(dict(**row, neutral=neutral, target=target))
+        return result
 
 
 @torch.no_grad()
@@ -89,17 +99,33 @@ def train_particle(config, *, runner=None):
     data = json.loads(Path(config["data"]).read_text())
     splits = {key: token_rows(runner.tokenizer, data[key], max_tokens=config.get("max_tokens", 384))
               for key in ("train", "dev", "calibration")}
+    data_sha256 = digest(config["data"])
+    selections = {r["index"]: r for r in data.get("curation", {}).get("selection", [])}
+    for split, rows in splits.items():
+        for index, row in enumerate(rows):
+            source_index = row.get("source_row_index", index)
+            provenance = dict(dataset_sha256=data_sha256, split=split, source_row_index=source_index)
+            if split == "train" and source_index in selections:
+                selected = selections[source_index]
+                provenance.update(teacher_generation_key=selected["generation_key"], jev_key=selected["jev_key"])
+            row["pair_provenance"] = provenance
+    from .pair_cache import FrozenPairCache
+    pair_cache = FrozenPairCache(config.get("pair_cache", Path(config["data"]).parent / "frozen-pairs"), identity)
     slider = Slider(model, api, scope=config.get("scope", "all"))
     start = time.monotonic()
     try:
-        training = prepare(model, slider, splits["train"])
-        development = prepare(model, slider, splits["dev"])
+        training = prepare(model, slider, splits["train"], pair_cache)
+        development = prepare(model, slider, splits["dev"], pair_cache)
+        write_json(output / "prepared-pairs.json", pair_cache.references)
+        write_json(output / "pair-cache-usage.json", dict(hits=pair_cache.hits, computed=pair_cache.computed))
         game = make_game(model, slider, training, config, api)
         ema = initialize_ema(slider)
-        contract = dict(config=config, identity=identity, data_sha256=digest(config["data"]),
+        contract = dict(config=config, identity=identity, data_sha256=data_sha256,
                         upstream=api.identity, formulation=game.state_dict()["config"],
                         implementation=implementation_identity(),
+                        training_sha256=prepared_identity(training),
                         development_sha256=prepared_identity(development),
+                        prepared_pairs_sha256=digest(output / "prepared-pairs.json"),
                         names=slider.names, rows={k:len(v) for k,v in splits.items()})
         completed = 0
         if config.get("resume"):
@@ -108,7 +134,8 @@ def train_particle(config, *, runner=None):
             old = {k:v for k,v in packet["contract"]["config"].items() if k not in {"output", "resume"}}
             new = {k:v for k,v in config.items() if k not in {"output", "resume"}}
             if old != new or any(packet["contract"].get(key) != contract[key] for key in
-                    ("data_sha256", "identity", "upstream", "implementation", "development_sha256")):
+                    ("data_sha256", "identity", "upstream", "implementation", "training_sha256",
+                     "development_sha256", "prepared_pairs_sha256")):
                 raise ValueError("Resume recipe, runtime, data or base differs")
             if "game" not in packet:
                 raise ValueError("Historical particle checkpoints require their original environment")

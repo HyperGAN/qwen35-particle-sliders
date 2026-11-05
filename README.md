@@ -6,8 +6,8 @@ answers to math questions while keeping the original model weights fixed.
 
 **The goal is a particle slider that beats the original model. We have not
 achieved that yet. Nothing has been submitted to Delta League, and the research
-PR is closed.** The last training run has finished; no training job is currently
-running from this project session.
+PR is closed.** Four fresh ParticleGAN 0.9.5 search trials have completed; the
+selected setting's longer training and answer-quality evaluation are in progress.
 
 Current training code uses **ParticleGAN 0.9.5 through the shared
 [particle-sliders core](https://github.com/HyperGAN/particle-sliders)**. The
@@ -68,6 +68,13 @@ better does not itself prove that answers improve.** In the completed experiment
 that matching improved, but the answer-quality checks did not show a win.
 The particle training uses worked solutions as guidance; it does not directly
 train next-token answer prediction.
+
+The next data stage generates candidate worked solutions with Qwen and uses
+**Jev through NanoGPT** to select correct, clear explanations. It samples again
+when an answer fails, caching both generated attempts and Jev judgments so reruns
+reuse them. Both positive and neutral inputs include the identical question.
+See [teacher data and caching](docs/teacher-data.md) for the selection rules,
+prompt contents, cache behavior and parallel commands.
 
 ## Why is there also a supervised LoRA experiment?
 

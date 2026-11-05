@@ -17,6 +17,12 @@ def main():
     for name in ("train-particle", "train-lora", "search"):
         command = commands.add_parser(name)
         command.add_argument("config")
+    for name in ("curate-teachers", "merge-teachers"):
+        command = commands.add_parser(name)
+        command.add_argument("config")
+        command.add_argument("--shards", type=int, default=1)
+        if name == "curate-teachers":
+            command.add_argument("--shard", type=int, default=0)
     export = commands.add_parser("build")
     export.add_argument("--workspace", required=True)
     export.add_argument("--deltas", required=True)
@@ -76,6 +82,16 @@ def main():
     elif args.command == "search":
         from .search import search
         search(json.loads(Path(args.config).read_text()))
+    elif args.command in {"curate-teachers", "merge-teachers"}:
+        from .teacher_data import curate, merge
+        config = json.loads(Path(args.config).read_text())
+        if args.command == "curate-teachers":
+            result = curate(config, shard=args.shard, shards=args.shards)
+            print(json.dumps(dict(accepted=len(result["selected"]), pending=result["pending"])))
+        else:
+            result = merge(config, shards=args.shards)
+            print(json.dumps(dict(output=config["output"], train=len(result["train"]),
+                                  dev=len(result["dev"]), calibration=len(result["calibration"]))))
     else:
         from .training import train_lora, train_particle
         function = train_particle if args.command == "train-particle" else train_lora

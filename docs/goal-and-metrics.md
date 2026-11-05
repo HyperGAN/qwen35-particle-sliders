@@ -16,9 +16,17 @@ not a fallback for this goal. Do not submit without that win.
 - Historical training and exports exist, but the old particle candidate did not
   demonstrate better answers. Those results are not results for ParticleGAN 0.9.5.
 
-No new 0.9.5 native training or quality evaluation has completed. The earlier
-research PR is closed. Native GPU resource coordination is pending with Ember;
-use a fresh run directory and the new environment for the next admitted run.
+Four fresh 0.9.5 search trials have completed. Trial 0 had the lowest student
+development error, with ON/OFF RMS `0.9994224`, and its fresh 256-update final run
+is in progress. The short-run nonlinear teacher's nine-task quality check was
+51.69% ON versus 52.12% OFF; the difference was inconclusive and did not show a
+win. The earlier research PR remains closed. Mikkel authorized parallel native
+execution; no submission is authorized without the required quality win.
+
+The next cohort will use [cached Qwen solutions selected by Jev through NanoGPT](teacher-data.md).
+The target is one accepted solution for each of 128 training questions, resampling
+failures while reusing saved attempts. Its new data identity and fresh training
+output must remain separate from the existing unfiltered cohort.
 
 ## How to read the training metric
 

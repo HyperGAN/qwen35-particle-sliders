@@ -1,0 +1,16 @@
+{
+  "workspace": "/ml2/deltaleague/experiment",
+  "data": "/ml2/deltaleague/data/gsm-v1.json",
+  "output": "/ml2/deltaleague/data/gsm-jev-ranked-v1.json",
+  "cache": "/ml2/deltaleague/cache/teacher-examples-v1",
+  "jev_model": "typesafe/jev-1.14",
+  "seed": 7100,
+  "max_attempts": 16,
+  "min_correctness": 0.9,
+  "min_quality": 3.0,
+  "training_max_tokens": 384,
+  "generation": {
+    "max_tokens": 256,
+    "enable_thinking": false
+  }
+}

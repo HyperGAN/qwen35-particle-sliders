@@ -19,6 +19,9 @@ def checked_result(config, upstream):
         raise ValueError('Cached recipe differs; use a fresh output directory')
     if result.get('contract_sha256') != digest(contract_path):
         raise ValueError('Result is not bound to its saved run contract')
+    if (not contract.get('training_sha256') or not contract.get('prepared_pairs_sha256')
+            or contract['prepared_pairs_sha256'] != digest(root/'prepared-pairs.json')):
+        raise ValueError('Cached paired training state manifest differs or is missing')
     if (contract.get('upstream') != upstream or result.get('upstream') != upstream
             or contract.get('implementation') != implementation_identity()
             or contract.get('data_sha256') != digest(config['data'])):
@@ -39,7 +42,8 @@ def checked_result(config, upstream):
         if values['off_rms'] == 0 or values['off_sse'] == 0:
             raise ValueError('Zero OFF error cannot define a relative search metric')
     comparison = {key: contract[key] for key in
-                  ('identity', 'data_sha256', 'upstream', 'implementation', 'development_sha256', 'names', 'rows')}
+                  ('identity', 'data_sha256', 'upstream', 'implementation', 'training_sha256',
+                   'development_sha256', 'prepared_pairs_sha256', 'names', 'rows')}
     comparison['off'] = {key: off[key] for key in ('off_rms', 'off_sse', 'compared_values', 'rows')}
     return result, comparison
 

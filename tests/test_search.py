@@ -62,6 +62,11 @@ def test_search_actual_trials_common_off_raw_sse_ranking_and_cache_reuse(search_
         search_module.search(changed)
     assert contract.read_bytes()==before and len(calls)==3
     assert (root/'search-results.json').read_bytes()==summary_before
+    paired = root/'trial-00/prepared-pairs.json'
+    paired.write_text(paired.read_text()+'\n')
+    with pytest.raises(ValueError,match='paired training state manifest'):
+        search_module.search(spec)
+    assert len(calls)==3
 
 
 def test_search_refuses_changed_source_data_and_incomplete_result(search_fixture):

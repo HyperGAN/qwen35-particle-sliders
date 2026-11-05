@@ -59,7 +59,8 @@ def token_rows(tokenizer, rows, *, max_tokens=384, history_tokens=32):
             continue
         prepared.append(dict(ids=neutral+history, positive_ids=positive+history,
                              supervised_ids=neutral+continuation[:max_tokens-len(neutral)],
-                             prompt_tokens=len(neutral), source=row["source"]))
+                             prompt_tokens=len(neutral), source=row["source"], source_row_index=index,
+                             neutral_text=neutral_text, positive_text=positive_text, history_ids=history))
     if len(prepared) < 2:
         raise ValueError("Not enough rows within the declared token budget")
     return prepared
