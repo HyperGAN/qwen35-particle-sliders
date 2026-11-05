@@ -32,6 +32,16 @@ def main():
     evaluate.add_argument("--tasks", nargs="+")
     evaluate.add_argument("--limit", type=int)
     evaluate.add_argument("--batch", type=int, default=4)
+    math = commands.add_parser("evaluate-math")
+    math.add_argument("--workspace", required=True)
+    math.add_argument("--output", required=True)
+    math.add_argument("--deltas")
+    math.add_argument("--teacher")
+    math.add_argument("--upstream")
+    math.add_argument("--strength", type=float, default=1.)
+    math.add_argument("--norm-gain", type=float, default=1.)
+    math.add_argument("--limit", type=int, default=16)
+    math.add_argument("--max-tokens", type=int, default=1024)
     args = parser.parse_args()
     if args.command == "prepare-gsm":
         result = prepare_gsm(args.source, args.output, train=args.train, dev=args.dev, calibration=args.calibration)
@@ -43,6 +53,11 @@ def main():
         from .evaluation import evaluate
         print(json.dumps(evaluate(args.workspace, args.output, deltas=args.deltas,
             strength=args.strength, norm_gain=args.norm_gain, names=args.tasks, limit=args.limit, batch=args.batch), indent=2))
+    elif args.command == "evaluate-math":
+        from .math_evaluation import evaluate_math
+        print(json.dumps(evaluate_math(args.workspace, args.output, deltas=args.deltas,
+            teacher=args.teacher, upstream=args.upstream, strength=args.strength, norm_gain=args.norm_gain,
+            limit=args.limit, max_tokens=args.max_tokens), indent=2))
     elif args.command == "search":
         from .search import search
         search(json.loads(Path(args.config).read_text()))

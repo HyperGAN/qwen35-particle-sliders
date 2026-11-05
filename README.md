@@ -123,10 +123,18 @@ qwen35-slider evaluate-likelihood --workspace experiment --output runs/eval/base
 qwen35-slider evaluate-likelihood --workspace experiment \
   --deltas runs/particle-search-v1/final/deltas.safetensors --output runs/eval/particle.json
 delta compare runs/eval/base.json runs/eval/particle.json --output runs/eval/comparison.json
+qwen35-slider evaluate-math --workspace experiment --output runs/eval/base-math.json
+qwen35-slider evaluate-math --workspace experiment \
+  --deltas runs/particle-search-v1/final/deltas.safetensors --output runs/eval/particle-math.json
 ```
 
 The per-example comparison records contain metric values rather than generated
 text. Their protocol hash is separate from the unchanged official manifest hash.
+The math command separately verifies the selected public GSM8K document hashes
+and generates up to 1,024 tokens on 16 examples by default, with the registered
+thinking/sampling settings and seed 1000. It reports truncation explicitly.
+`--teacher` can load the nonlinear particle artifact for a teacher/student check.
+Raw math generations remain local and are excluded from Git.
 
 The intended final deliverable is a validated submission directory plus its
 research record and reproducible source. Before an actual submission, open a

@@ -21,6 +21,7 @@ def document_hash(doc):
 
 def prepare_tasks(workspace, names, limit=None):
     from lm_eval.tasks import TaskManager
+    from lm_eval.tasks._yaml_loader import load_yaml
     from lm_eval.api.task import ConfigurableTask
     manifest = json.loads((Path(workspace) / "validation.json").read_text())
     if version("lm-eval") != manifest["versions"]["lm-eval"]:
@@ -32,7 +33,9 @@ def prepare_tasks(workspace, names, limit=None):
         if set(selection) != {name}:
             raise ValueError("This local comparison requires individual likelihood tasks")
         selected = selection[name]
-        config = copy.deepcopy(manager.task_index[name].cfg)
+        # The index keeps !function values as strings; execute the same pinned
+        # YAML loader as the real task factory before instantiating tasks.
+        config = copy.deepcopy(load_yaml(manager.task_index[name].yaml_path, resolve_func=True))
         dataset = config["dataset_path"]
         if dataset not in manifest["dataset_revisions"]:
             raise ValueError("Task dataset is not pinned in public manifest: " + dataset)
