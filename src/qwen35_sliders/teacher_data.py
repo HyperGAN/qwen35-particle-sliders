@@ -173,17 +173,24 @@ def parsed_answer(response, expected):
     return reasoning.strip(), None
 
 
+def generation_recipe(row, identity, generation, seed, attempt, *, retry_generation=None, retry_after=64):
+    settings = dict(generation)
+    if retry_generation and attempt >= retry_after:
+        settings.update(retry_generation)
+    return dict(protocol="qwen-guided-teacher-v1", teacher=identity, prompt=PROMPT.format(**row),
+        generation=settings, seed=(int(fingerprint(dict(source=row["source"], prompt=row["prompt"], seed=seed))[:15], 16)+attempt) % (2**32))
+
+
 def sample_positive(row, generator, identity, generation, cache, judge, *, seed=7100,
-                    max_attempts=16, min_correctness=.9, min_quality=3., fits=None):
+                    max_attempts=16, min_correctness=.9, min_quality=3., fits=None,
+                    retry_generation=None, retry_after=64):
     """Judge saved attempts first; generate only until an acceptable positive exists."""
-    if not 1 <= max_attempts <= 64:
-        raise ValueError("Use 1..64 attempts per invocation; increase to resume a pending question")
+    if not 1 <= max_attempts <= 128 or type(retry_after) is not int or not 1 <= retry_after <= 128:
+        raise ValueError("Use 1..128 attempts and a bounded retry threshold")
     if not 0 <= min_correctness <= 1 or not 0 <= min_quality <= 4:
         raise ValueError("Invalid acceptance thresholds")
-    prompt = PROMPT.format(**row)
-    recipes = [dict(protocol="qwen-guided-teacher-v1", teacher=identity, prompt=prompt,
-        generation=generation, seed=(int(fingerprint(dict(source=row["source"], prompt=row["prompt"], seed=seed))[:15], 16)+i) % (2**32))
-        for i in range(max_attempts)]
+    recipes = [generation_recipe(row, identity, generation, seed, i,
+        retry_generation=retry_generation, retry_after=retry_after) for i in range(max_attempts)]
     attempts, accepted = [], []
     def assess(index, response, hit):
         recipe = recipes[index]
@@ -209,10 +216,14 @@ def sample_positive(row, generator, identity, generation, cache, judge, *, seed=
         else:
             assess(index, response, True)
     if not accepted:
+        # Retry settings are opt-in; prefer their fresh attempts after inspecting
+        # every cached legacy attempt, so accepted data is never regenerated.
+        if retry_generation:
+            missing.sort(key=lambda index: (index < retry_after, index))
         for index in missing:
             recipe = recipes[index]
             response, hit, _ = cache.once("generation", recipe,
-                lambda recipe=recipe: generator(prompt, generation, recipe["seed"]))
+                lambda recipe=recipe: generator(recipe["prompt"], recipe["generation"], recipe["seed"]))
             assess(index, response, hit)
             if accepted:
                 break
@@ -252,7 +263,8 @@ def curate(config, *, shard=0, shards=1, runner_pair=None, judge=None):
     contract = dict(source_data_sha256=digest(config["data"]), teacher=identity, generation=generation,
         curator_implementation_sha256=digest(__file__),
         generator_prompt_sha256=fingerprint(PROMPT), jev_model=judge.model, jev_endpoint=ENDPOINT,
-        questions=judge.questions, policy=policy, shard=shard, shards=shards)
+        questions=judge.questions, policy=policy, shard=shard, shards=shards,
+        retry_generation=config.get("retry_generation"), retry_after=config.get("retry_after", 64))
     output = Path(config["output"]).with_suffix(f".part-{shard:02d}-of-{shards:02d}.json")
     if output.exists():
         old = json.loads(output.read_text())
@@ -273,7 +285,8 @@ def curate(config, *, shard=0, shards=1, runner_pair=None, judge=None):
             return True
         result = sample_positive(row, runner.generate, identity, generation, cache, judge,
             seed=policy["seed"], max_attempts=config.get("max_attempts", 16),
-            min_correctness=policy["min_correctness"], min_quality=policy["min_quality"], fits=fits)
+            min_correctness=policy["min_correctness"], min_quality=policy["min_quality"], fits=fits,
+            retry_generation=contract["retry_generation"], retry_after=contract["retry_after"])
         if result["pending"]:
             pending.append(index)
         else:
@@ -331,12 +344,11 @@ def merge(config, *, shards=1):
 def verify_selection(entry, original, contract, cache):
     """Bind a selected row back to the saved generation and actual Jev response."""
     attempt = entry["attempt"]
-    if type(attempt) is not int or not 0 <= attempt < 64:
+    if type(attempt) is not int or not 0 <= attempt < 128:
         raise ValueError("Invalid selected attempt")
-    base_seed = int(fingerprint(dict(source=original["source"], prompt=original["prompt"],
-                                    seed=contract["policy"]["seed"]))[:15], 16)
-    recipe = dict(protocol="qwen-guided-teacher-v1", teacher=contract["teacher"],
-        prompt=PROMPT.format(**original), generation=contract["generation"], seed=(base_seed+attempt) % (2**32))
+    recipe = generation_recipe(original, contract["teacher"], contract["generation"],
+        contract["policy"]["seed"], attempt, retry_generation=contract.get("retry_generation"),
+        retry_after=contract.get("retry_after", 64))
     if fingerprint(recipe) != entry["generation_key"]:
         raise ValueError("Selected teacher generation identity differs")
     response = cache.get("generation", recipe)

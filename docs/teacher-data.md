@@ -136,3 +136,21 @@ The provider request contract is documented by
 [NanoGPT Decisions](https://docs.nano-gpt.com/api-reference/endpoint/decisions).
 The grading uses TypeSafe's [Score](https://docs.typesafe.ai/primitives/score) and
 Noul primitives, served here exclusively through NanoGPT.
+
+
+### Retrying difficult questions without replacing accepted examples
+
+An optional `retry_generation` object provides different generation settings for
+attempt indices 64–127 (`retry_after` defaults to 64). The retry implementation
+first checks every cached attempt, including the original recipe. If any cached
+answer passes the unchanged Jev and code checks, it reuses the best one. Otherwise
+it prioritizes new retry-setting attempts, keeping their actual settings and seed
+in the generation cache key. The maximum attempt index is bounded at 127.
+
+Use a fresh output name after changing the curator implementation or retry recipe;
+existing generation and Jev records are still reused from the shared cache. The
+current retry pass uses presence penalty 0 and temperature 0.6. It changes sampling,
+not acceptance: correct final number, correctness >=0.90, quality >=3/4, no truncation,
+and the training token budget are still required. A rejected candidate may be
+mathematically correct yet fail the separate explanation-quality threshold. Jev is
+a fallible filter; its outputs are not proof of correctness or model improvement.

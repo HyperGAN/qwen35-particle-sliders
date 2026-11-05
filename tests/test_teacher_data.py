@@ -173,3 +173,53 @@ def test_merge_preserves_heldout_rows_and_rejects_selection_tampering(tmp_path):
     packet = json.loads(part.read_text());packet['selected'][0]['row']['reasoning']='Forged answer';part.write_text(json.dumps(packet))
     with pytest.raises(ValueError, match='differs from the cached'):
         merge(config,shards=2)
+
+
+def test_retry_schedule_reuses_accepted_legacy_answer_and_checks_actual_recipe(tmp_path):
+    from qwen35_sliders.teacher_data import generation_recipe, verify_selection
+    cache, judge, _ = sampler(tmp_path)
+    calls = []
+    def generate(prompt, settings, seed):
+        calls.append(dict(settings))
+        return dict(text="8+5=13. There are 13 marbles.\n####13", truncated=False)
+    settings = dict(max_tokens=256, presence_penalty=1.5)
+    original = sample_positive(ROW, generate, {"parent":"frozen"}, settings, cache, judge)
+    retried = sample_positive(ROW, generate, {"parent":"frozen"}, settings, cache, judge,
+        max_attempts=128, retry_generation={"presence_penalty":0., "temperature":.6})
+    assert len(calls) == 1
+    assert original["accepted"]["generation_key"] == retried["accepted"]["generation_key"]
+    best = retried["accepted"]
+    entry = dict(best, row=dict(ROW, reasoning=best["reasoning"]))
+    contract = dict(teacher={"parent":"frozen"}, generation=settings,
+        policy=dict(seed=7100,min_correctness=.9,min_quality=3.),
+        retry_generation={"presence_penalty":0., "temperature":.6}, retry_after=64,
+        jev_model=judge.model, questions=QUESTIONS)
+    verify_selection(entry, ROW, contract, cache)
+    assert generation_recipe(ROW, {"parent":"frozen"}, settings,7100,63)["generation"] == settings
+
+
+def test_retry_schedule_generates_only_new_setting_and_verifies_selected_record(tmp_path):
+    from qwen35_sliders.teacher_data import verify_selection
+    cache, judge, client = sampler(tmp_path)
+    calls = []
+    def generate(prompt, settings, seed):
+        calls.append(dict(settings))
+        good = settings.get("presence_penalty") == 0.
+        return dict(text="8+5=13.\n####13" if good else "8+5=12.\n####12", truncated=False)
+    settings = dict(max_tokens=256, presence_penalty=1.5)
+    old = sample_positive(ROW,generate,{"parent":"frozen"},settings,cache,judge,max_attempts=2)
+    assert old["pending"] and len(calls)==2
+    retry = {"presence_penalty":0., "temperature":.6}
+    result = sample_positive(ROW,generate,{"parent":"frozen"},settings,cache,judge,
+        max_attempts=128,retry_generation=retry)
+    best=result["accepted"]
+    assert best["attempt"]==64 and len(calls)==3 and calls[-1]==dict(settings,**retry)
+    contract=dict(teacher={"parent":"frozen"},generation=settings,
+        policy=dict(seed=7100,min_correctness=.9,min_quality=3.),retry_generation=retry,retry_after=64,
+        jev_model=judge.model,questions=QUESTIONS)
+    verify_selection(dict(best,row=dict(ROW,reasoning=best["reasoning"])),ROW,contract,cache)
+    contract["retry_generation"]={"presence_penalty":.5}
+    with pytest.raises(ValueError,match="generation identity differs"):
+        verify_selection(dict(best,row=dict(ROW,reasoning=best["reasoning"])),ROW,contract,cache)
+    with pytest.raises(ValueError,match="1..128"):
+        sample_positive(ROW,generate,{},settings,cache,judge,max_attempts=129)
