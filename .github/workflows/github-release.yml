@@ -1,0 +1,67 @@
+name: GitHub model prerelease
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - release.json
+      - scripts/publish_release.py
+      - tests/test_publish_release.py
+      - .github/workflows/github-release.yml
+  push:
+    branches: [main]
+    paths:
+      - release.json
+      - scripts/publish_release.py
+      - tests/test_publish_release.py
+      - .github/workflows/github-release.yml
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Validate release request
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      tag: ${{ steps.request.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.11'
+      - run: python -m unittest discover -s tests -p test_publish_release.py
+      - name: Validate the reviewed tag and source revision
+        id: request
+        if: ${{ hashFiles('release.json') != '' }}
+        run: |
+          python scripts/publish_release.py validate
+          python -c 'import json; print("tag=" + json.load(open("release.json"))["tag"])' >> "$GITHUB_OUTPUT"
+
+  publish:
+    name: Publish reviewed GitHub prerelease
+    if: ${{ github.repository == 'HyperGAN/qwen35-particle-sliders' && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.check.outputs.tag != '' }}
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: write
+    concurrency:
+      group: qwen35-github-release-${{ needs.check.outputs.tag }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.11'
+      - name: Verify the draft and publish the prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/publish_release.py publish
