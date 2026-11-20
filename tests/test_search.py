@@ -7,7 +7,7 @@ import json
 import pytest
 import torch
 
-from qwen35_sliders.data import write_json
+from qwen35_sliders.data import digest, write_json
 from qwen35_sliders import search as search_module
 from qwen35_sliders import training
 from test_host import TinyQwen
@@ -30,14 +30,28 @@ def search_fixture(tmp_path, monkeypatch):
             model = TinyQwen()
         training.train_particle(config,runner=(SimpleNamespace(model=model,tokenizer=None),{'parent':'fixture-base'}))
     monkeypatch.setattr(search_module,'subprocess',SimpleNamespace(run=child, STDOUT=STDOUT))
+    def evaluate(workspace, output, *, device, teacher, strength, offset, limit, seed, max_tokens):
+        scores = [0, 1] if teacher is None else [1, int(teacher.parent.name == 'trial-00')]
+        rows = [dict(example_index=i, sample=0, score=score, truncated=False)
+                for i, score in enumerate(scores)]
+        generations = output.with_suffix('.generations.jsonl')
+        generations.write_text(''.join(json.dumps(row) + '\n' for row in rows))
+        write_json(output, dict(model_id='fixture', source_version_id='version', config_id='cfg',
+            validation_sha256='manifest', runtime='CPU fixture', generations_sha256=digest(generations),
+            artifact=dict(teacher_sha256=digest(teacher) if teacher else None, strength=strength,
+                          deltas_sha256=None, norm_gain=1.0),
+            protocol=dict(indices=[0, 1], selection_offset=offset, seed=seed,
+                          generation=dict(max_tokens=max_tokens))))
+    monkeypatch.setattr(search_module, 'evaluate_math', evaluate)
     spec = dict(output=str(tmp_path/'search'),
-        base=dict(data=str(data),device='cpu',seed=7,steps=2,batch=2,
+        development=dict(offset=0, limit=2, seed=1000, max_tokens=8192),
+        base=dict(workspace='fixture',data=str(data),device='cpu',seed=7,steps=2,batch=2,
                   checkpoint_every=1,calibration_rows=32),
         trials=[dict(lr=1e-5),dict(lr=2e-5)],final_steps=3)
     return spec,calls
 
 
-def test_search_actual_trials_common_off_raw_sse_ranking_and_cache_reuse(search_fixture):
+def test_search_ranks_finished_answers_and_reuses_cached_results(search_fixture):
     from pathlib import Path
     spec,calls = search_fixture
     search_module.search(spec)
@@ -45,8 +59,8 @@ def test_search_actual_trials_common_off_raw_sse_ranking_and_cache_reuse(search_
     root = Path(spec['output'])
     results = json.loads((root/'search-results.json').read_text())
     selected = json.loads((root/'selected.json').read_text())
-    best = min(results,key=lambda r:r['result']['student']['on_sse'])
-    assert selected['trial']==best['index']
+    assert selected['trial'] == 0
+    assert [r['intended_effect'] for r in results] == [0.5, 0.0]
     assert len({r['result']['student']['off_sse'] for r in results})==1
     for record in results:
         values=record['result']['student']

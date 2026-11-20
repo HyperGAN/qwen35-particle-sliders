@@ -1,8 +1,8 @@
-# Training with ParticleGAN 0.9.5
+# Training with ParticleGAN 0.11.0
 
 Run these commands from the repository root. The command-line API is unchanged;
 new particle runs use the shared `particle-sliders-core` 0.13 engine and published
-`particlegan==0.9.5`. They use a fresh output directory and cannot resume the
+`particlegan==0.11.0`. They use a fresh output directory and cannot resume the
 historical 0.6.0 experiment. No new benchmark result is claimed by this update.
 
 ## Install and prepare
@@ -29,14 +29,14 @@ Use the GPU assigned to your workload when setting `CUDA_VISIBLE_DEVICES`.
 qwen35-slider search configs/search.json
 ```
 
-This runs four 32-update settings, then a fresh 256-update final using the selected
-setting. The generator, critic and particle-bank learning-rate settings remain
-configurable through the same JSON keys. Selection uses raw hidden-state error
-on separate development questions, not benchmark answers. Lower error is only a
-training diagnostic; the candidate must separately beat the base on matched
-answer-quality evaluation before submission.
+This runs four 32-update trials. The search evaluates the RAW nonlinear
+teacher on the predeclared development questions with matched finished-answer
+settings, then ranks by the mean score gain over OFF. A unique winner can start
+the declared 256-update final. Tied or unmeasured trials produce a summary
+without starting a final. Hidden-response errors remain diagnostics. Actual
+native output health and confirmation require separate qualification.
 
-The shared `ConditionalPG09` engine supplies ParticleGAN's public
+The shared `ConditionalParticleGAN` engine supplies ParticleGAN's public
 `bispf_optimized` recipe: its adversarial loss, critic penalty, particle-prior
 regularizer and optimizers. This replaces the historical RpGAN/b_cap/VIC game.
 The routed adapter architecture still shares one 128×4 bank across rank-8
@@ -47,13 +47,13 @@ Qwen supplies paired hidden responses, with and without worked-solution context.
 The critic receives the paired response error plus noise, conditioned on the
 normalized frozen neutral response. Error is divided by the training set's
 scalar RMS edit size. The model's full hidden width is retained and explicitly
-declared `continuous`; ParticleGAN 0.9.5 supports this without reshaping it or
+declared `continuous`; ParticleGAN 0.11.0 supports this without reshaping it or
 interpreting it as categorical. The critic emits raw logits.
 
 Each run writes its resolved upstream recipe, exact source identities, data/model
 identity, metrics, particle teacher, distilled adapter, projection weight deltas
 and continuation checkpoint. Continuation includes the shared game, optimizers,
-regularizers, random streams and moving-average adapter state. Old-version or
+regularizers and random streams for the raw weights. Old-version or
 mismatched-source checkpoints are refused. `particle_grad_norm` includes the
 public prior regularizer; it is not labelled an adversarial-only gradient.
 
@@ -72,12 +72,12 @@ student; it does not prove that the student equals the teacher.
 
 ```sh
 qwen35-slider build --workspace experiment \
-  --deltas runs/particle-search-pg095-v2/final/deltas.safetensors \
-  --strength 1 --output runs/particle-pg095-patch
-delta validate runs/particle-pg095-patch
+  --deltas runs/particle-search-engine-v1/final/deltas.safetensors \
+  --strength 1 --output runs/particle-engine-patch
+delta validate runs/particle-engine-patch
 qwen35-slider verify-candidate --workspace experiment \
-  --deltas runs/particle-search-pg095-v2/final/deltas.safetensors \
-  --patch runs/particle-pg095-patch
+  --deltas runs/particle-search-engine-v1/final/deltas.safetensors \
+  --patch runs/particle-engine-patch
 ```
 
 ## Compare against the original model
@@ -85,7 +85,7 @@ qwen35-slider verify-candidate --workspace experiment \
 ```sh
 qwen35-slider evaluate-likelihood --workspace experiment --output runs/eval/base.json
 qwen35-slider evaluate-likelihood --workspace experiment \
-  --deltas runs/particle-search-pg095-v2/final/deltas.safetensors --output runs/eval/particle.json
+  --deltas runs/particle-search-engine-v1/final/deltas.safetensors --output runs/eval/particle.json
 delta compare runs/eval/base.json runs/eval/particle.json --output runs/eval/comparison.json
 ```
 

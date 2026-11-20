@@ -1,5 +1,4 @@
 """Upstream GAN callbacks and a separately labelled supervised LoRA baseline."""
-from contextlib import contextmanager
 import hashlib
 import json
 from pathlib import Path
@@ -10,7 +9,7 @@ from safetensors.torch import save_file
 
 from .data import digest, token_rows, write_json
 from .host import Slider, hidden, distill, linear_deltas
-from .particle import make_game, initialize_ema, update_ema
+from .particle import make_game
 
 
 def implementation_identity():
@@ -41,16 +40,6 @@ def load_host(workspace, device="cuda"):
                         provenance=provenance, runtime=runner.details)
 
 
-@contextmanager
-def state(slider, values):
-    previous = {k: v.detach().clone() for k, v in slider.state_dict().items()}
-    slider.load_state_dict(values, strict=True)
-    try:
-        yield
-    finally:
-        slider.load_state_dict(previous, strict=True)
-
-
 @torch.no_grad()
 def prepare(model, slider, rows):
     with slider.scaled(0.):
@@ -76,7 +65,10 @@ def metrics(model, slider, rows):
 
 
 def train_particle(config, *, runner=None):
+    from particle_sliders.weight_policy import require_no_weight_ema
     from .upstream import load
+    require_no_weight_ema(config.get("ema_decay"))
+    config = dict(config, ema_decay=None)
     api = load(config.get("upstream"))
     output = Path(config["output"])
     output.mkdir(parents=True, exist_ok=True)
@@ -95,7 +87,6 @@ def train_particle(config, *, runner=None):
         training = prepare(model, slider, splits["train"])
         development = prepare(model, slider, splits["dev"])
         game = make_game(model, slider, training, config, api)
-        ema = initialize_ema(slider)
         contract = dict(config=config, identity=identity, data_sha256=digest(config["data"]),
                         upstream=api.identity, formulation=game.state_dict()["config"],
                         implementation=implementation_identity(),
@@ -113,7 +104,6 @@ def train_particle(config, *, runner=None):
             if "game" not in packet:
                 raise ValueError("Historical particle checkpoints require their original environment")
             game.load_state_dict(packet["game"])
-            ema = packet["ema"]
             completed = packet["step"]
             if completed != game.completed_steps:
                 raise ValueError("Checkpoint step differs from the actual shared-game step")
@@ -121,14 +111,13 @@ def train_particle(config, *, runner=None):
         initial = dict(step=completed, **metrics(model, slider, development))
         write_json(output / "initial.json", initial)
         def checkpoint(step):
-            packet = dict(contract=contract, step=step, game=game.state_dict(), ema=ema)
+            packet = dict(contract=contract, step=step, game=game.state_dict())
             temporary = output / "continuation.tmp"
             torch.save(packet, temporary)
             temporary.replace(output / "continuation.pt")
         with (output / "metrics.jsonl").open("a") as stream:
             for step in range(completed, config["steps"]):
                 record = game.step()
-                update_ema(ema, slider)
                 record["particle_grad_norm"] = float(slider.particles.grad.norm())
                 record.update(step=step+1, elapsed_seconds=time.monotonic()-start)
                 stream.write(json.dumps(record, allow_nan=False)+"\n"); stream.flush()
@@ -136,13 +125,8 @@ def train_particle(config, *, runner=None):
                     checkpoint(step+1)
                     print(json.dumps({k:record[k] for k in ("step", "g_adv", "d_loss", "particle_grad_norm", "elapsed_seconds")}), flush=True)
         raw_metrics = metrics(model, slider, development)
-        with state(slider, ema):
-            ema_metrics = metrics(model, slider, development)
-        # Selection uses disjoint training-source development data, not the public test suite.
-        use_ema = ema_metrics["on_rms"] < raw_metrics["on_rms"]
-        if use_ema:
-            slider.load_state_dict(ema, strict=True)
-        save_file({k:v.detach().cpu().contiguous() for k,v in slider.state_dict().items()}, str(output / "particle.safetensors"))
+        save_file({k:v.detach().cpu().contiguous() for k,v in slider.state_dict().items()},
+                  str(output / "particle.safetensors"), metadata={"weights_kind": "raw"})
         student, calibration = distill(slider, model, [r["ids"] for r in splits["calibration"]], api,
                                        rows=config.get("calibration_rows", 256))
         save_file(student, str(output / "distilled.safetensors"))
@@ -155,8 +139,8 @@ def train_particle(config, *, runner=None):
         deltas = linear_deltas(slider)
         save_file(deltas, str(output / "deltas.safetensors"))
         result = dict(kind="particle-distilled", upstream=api.identity, metric="raw_hidden_rms",
-                      steps=config["steps"], completed_steps=game.completed_steps, raw=raw_metrics, ema=ema_metrics,
-                      selected="ema" if use_ema else "raw", student=student_metrics, initial=initial,
+                      steps=config["steps"], completed_steps=game.completed_steps, raw=raw_metrics,
+                      selected="raw", student=student_metrics, initial=initial,
                       targets=names, elapsed_seconds=time.monotonic()-start,
                       contract_sha256=digest(output / "contract.json"),
                       deltas_sha256=digest(output / "deltas.safetensors"))

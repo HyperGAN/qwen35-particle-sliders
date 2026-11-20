@@ -1,6 +1,6 @@
-Current training uses HyperGAN/particle-sliders core 0.13.0 and released
-255BITS/ParticleGAN 0.9.5 (MIT), tag commit
-1b8355b184b21bb7d81104ee590813c262f6df0a. Exact shared-core pin is in
+Current training uses HyperGAN/particle-sliders core 0.15.1 and released
+255BITS/ParticleGAN 0.11.0 (MIT), tag commit
+b86f0379b4d887f4cde88d686aedc04661a2b61b. Exact shared-core pin is in
 pyproject.toml; the core verifies the ParticleGAN release source closure.
 GAN mathematics is imported from ParticleGAN; the routed architecture and ridge
 fitter are imported from particle-sliders. No GAN loss is copied into this repo.

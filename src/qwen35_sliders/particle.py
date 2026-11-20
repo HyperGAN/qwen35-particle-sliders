@@ -35,19 +35,9 @@ def make_game(model, slider, training, config, api):
     overrides = dict(lr=config.get("lr", .0006),
                      d_lr_mult=config.get("d_lr_mult", 1.5),
                      prior_lr_mult=config.get("particle_lr_mult", 10.))
-    game = api.ConditionalPG09(HiddenBackend(model, slider), rows, critic,
+    game = api.ConditionalParticleGAN(HiddenBackend(model, slider), rows, critic,
         conditions=conditions, particles=slider.particles,
         response_domain="continuous_vector", penalty_input_domain="continuous",
         response_scale=scale, preset="bispf_optimized", batch_size=config.get("batch", 4),
         seed=config.get("seed", 7), total_steps=config["steps"], recipe_overrides=overrides)
     return game
-
-
-def initialize_ema(slider):
-    return {k:v.detach().clone() for k,v in slider.state_dict().items()}
-
-
-@torch.no_grad()
-def update_ema(ema, slider, decay=.995):
-    for key,value in slider.state_dict().items():
-        ema[key].lerp_(value, 1.-decay)
