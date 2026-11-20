@@ -1,6 +1,8 @@
 """Upstream GAN callbacks and a separately labelled supervised LoRA baseline."""
+from dataclasses import asdict
 import hashlib
 import json
+import os
 from pathlib import Path
 import time
 
@@ -64,11 +66,24 @@ def metrics(model, slider, rows):
                 compared_values=count, rows=len(rows))
 
 
-def train_particle(config, *, runner=None):
+def train_particle(config, *, runner=None, guard=None, finished_probe=None):
+    from particle_sliders.candidate_failure import CandidateGuard, FileRecord, GuardUnmeasured
     from particle_sliders.weight_policy import require_no_weight_ema
     from .upstream import load
     require_no_weight_ema(config.get("ema_decay"))
     config = dict(config, ema_decay=None)
+    fixture = runner is not None and config.get("device") == "cpu"
+    if guard is not None or finished_probe is not None:
+        if (not isinstance(guard, CandidateGuard) or guard.binding["media"] != "text"
+                or not callable(finished_probe)):
+            raise GuardUnmeasured("Qwen3.5 requires a qualified finished-text probe and candidate guard")
+        guard.require_update()
+    elif not fixture:
+        raise GuardUnmeasured("Qwen3.5 has no bound qualified finished-text probe")
+    resume_source = None
+    if config.get("resume") and guard is not None:
+        resume_source = FileRecord.from_path(Path(config["resume"]).resolve(strict=True))
+        guard.require_selection(resume_source)
     api = load(config.get("upstream"))
     output = Path(config["output"])
     output.mkdir(parents=True, exist_ok=True)
@@ -94,7 +109,12 @@ def train_particle(config, *, runner=None):
                         names=slider.names, rows={k:len(v) for k,v in splits.items()})
         completed = 0
         if config.get("resume"):
-            packet = torch.load(config["resume"], map_location=next(slider.parameters()).device, weights_only=True)
+            source = resume_source.path if resume_source else config["resume"]
+            if resume_source:
+                resume_source.verify()
+            packet = torch.load(source, map_location=next(slider.parameters()).device, weights_only=True)
+            if resume_source:
+                resume_source.verify()
             # Output and resume paths are operational; the training recipe must match.
             old = {k:v for k,v in packet["contract"]["config"].items() if k not in {"output", "resume"}}
             new = {k:v for k,v in config.items() if k not in {"output", "resume"}}
@@ -110,20 +130,47 @@ def train_particle(config, *, runner=None):
         write_json(output / "contract.json", contract)
         initial = dict(step=completed, **metrics(model, slider, development))
         write_json(output / "initial.json", initial)
-        def checkpoint(step):
+        def checkpoint(step, *, assess=False):
             packet = dict(contract=contract, step=step, game=game.state_dict())
             temporary = output / "continuation.tmp"
-            torch.save(packet, temporary)
-            temporary.replace(output / "continuation.pt")
+            target = output / "continuation.pt"
+            with temporary.open("wb") as stream:
+                torch.save(packet, stream)
+                stream.flush()
+                os.fsync(stream.fileno())
+            temporary.replace(target)
+            if assess:
+                retained = output / f"assessed-full-{step:06d}.pt"
+                retained.hardlink_to(target)
+                descriptor = os.open(output, os.O_RDONLY)
+                try:
+                    os.fsync(descriptor)
+                finally:
+                    os.close(descriptor)
+                source = FileRecord.from_path(retained.resolve())
+                guard.check_checkpoint(source, lambda: finished_probe(runner, slider, source))
+                return source
+            return None
+
+        endpoint = config["steps"]
+        milestones = {(quarter * endpoint + 3) // 4 for quarter in range(1, 5)}
+        approved_checkpoint = resume_source
         with (output / "metrics.jsonl").open("a") as stream:
-            for step in range(completed, config["steps"]):
+            for step in range(completed, endpoint):
+                if guard is not None:
+                    guard.require_update()
                 record = game.step()
                 record["particle_grad_norm"] = float(slider.particles.grad.norm())
                 record.update(step=step+1, elapsed_seconds=time.monotonic()-start)
                 stream.write(json.dumps(record, allow_nan=False)+"\n"); stream.flush()
-                if (step+1) % config.get("checkpoint_every", 16) == 0 or step+1 == config["steps"]:
-                    checkpoint(step+1)
+                assess = guard is not None and step + 1 in milestones
+                if assess or (step+1) % config.get("checkpoint_every", 16) == 0 or step+1 == endpoint:
+                    saved = checkpoint(step+1, assess=assess)
+                    if saved is not None:
+                        approved_checkpoint = saved
                     print(json.dumps({k:record[k] for k in ("step", "g_adv", "d_loss", "particle_grad_norm", "elapsed_seconds")}), flush=True)
+        if guard is not None:
+            guard.require_selection(approved_checkpoint)
         raw_metrics = metrics(model, slider, development)
         save_file({k:v.detach().cpu().contiguous() for k,v in slider.state_dict().items()},
                   str(output / "particle.safetensors"), metadata={"weights_kind": "raw"})
@@ -144,6 +191,8 @@ def train_particle(config, *, runner=None):
                       targets=names, elapsed_seconds=time.monotonic()-start,
                       contract_sha256=digest(output / "contract.json"),
                       deltas_sha256=digest(output / "deltas.safetensors"))
+        if approved_checkpoint is not None:
+            result["assessed_full"] = asdict(approved_checkpoint)
         write_json(output / "result.json", result)
         return result
     finally:

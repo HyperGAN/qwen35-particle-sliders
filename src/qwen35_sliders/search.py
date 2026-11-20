@@ -8,7 +8,7 @@ import sys
 
 from .data import digest, write_json
 from .math_evaluation import evaluate_math
-from .training import implementation_identity
+from .training import implementation_identity, train_particle
 from .upstream import load
 
 
@@ -74,7 +74,14 @@ def finished_answers(workspace, path, development, *, device, teacher=None):
     return scores, identity
 
 
-def search(spec):
+def search(spec, *, guard_for=None, finished_probe=None):
+    from particle_sliders.candidate_failure import CandidateGuard, FileRecord, GuardUnmeasured
+
+    guarded = guard_for is not None or finished_probe is not None
+    if guarded and (not callable(guard_for) or not callable(finished_probe)):
+        raise GuardUnmeasured("Qwen3.5 search requires a text candidate guard and finished-output probe")
+    if not guarded and spec['base'].get('device') != 'cpu':
+        raise GuardUnmeasured("Qwen3.5 search has no bound qualified finished-text probe")
     if not 1 <= len(spec['trials']) <= 12 or not 1 <= spec['final_steps'] <= 1600:
         raise ValueError('Declared local search cap exceeded')
     development = spec['development']
@@ -101,12 +108,28 @@ def search(spec):
             checked_result(config, upstream)
 
     def run(config, path, log_path):
+        guard = guard_for(config) if guarded else None
+        if guarded and (not isinstance(guard, CandidateGuard) or guard.binding['media'] != 'text'):
+            raise GuardUnmeasured("Qwen3.5 search requires a guard for each text candidate")
         if not (Path(config['output'])/'result.json').exists():
             write_json(path, config)
-            with log_path.open('a') as log:
-                subprocess.run([sys.executable, '-m', 'qwen35_sliders.cli', 'train-particle', str(path)],
-                               stdout=log, stderr=subprocess.STDOUT, check=True)
-        return checked_result(config, upstream)
+            if guard is None:
+                with log_path.open('a') as log:
+                    subprocess.run([sys.executable, '-m', 'qwen35_sliders.cli', 'train-particle', str(path)],
+                                   stdout=log, stderr=subprocess.STDOUT, check=True)
+            else:
+                train_particle(config, guard=guard, finished_probe=finished_probe)
+        result, comparison = checked_result(config, upstream)
+        if guard is not None:
+            if 'assessed_full' not in result:
+                raise GuardUnmeasured("Qwen3.5 result has no assessed FULL checkpoint")
+            checkpoint = FileRecord(**result['assessed_full'])
+            expected = Path(config['output']) / f"assessed-full-{config['steps']:06d}.pt"
+            if Path(checkpoint.path) != expected.resolve():
+                raise GuardUnmeasured("Qwen3.5 result does not bind the final candidate checkpoint")
+            checkpoint.verify()
+            guard.require_selection(checkpoint)
+        return result, comparison
 
     for index, config in enumerate(configs):
         result, comparison = run(config, root/f'trial-{index:02d}.json', root/f'trial-{index:02d}.log')
@@ -147,10 +170,7 @@ def search(spec):
     selected = dict(trial=best['index'], criterion='mean matched finished-answer score ON minus OFF',
                     intended_effect=top, config=final, comparison_identity=reference)
     final_path = root/'final.json'
-    if (Path(final['output'])/'result.json').exists():
-        _, comparison = checked_result(final, upstream)
-    else:
-        _, comparison = run(final, final_path, root/'final.log')
+    _, comparison = run(final, final_path, root/'final.log')
     if comparison != reference:
         raise ValueError('Final run does not share the trials\' held-out data, base and OFF baseline')
     write_json(root/'selected.json', selected)

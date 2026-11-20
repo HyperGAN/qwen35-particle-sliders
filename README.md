@@ -135,3 +135,18 @@ The training code is in [training.py](src/qwen35_sliders/training.py), the slide
 modules are in [host.py](src/qwen35_sliders/host.py), and the particle search
 settings are in [configs/search.json](configs/search.json). Source attribution
 and dependency versions are in [NOTICE.md](NOTICE.md).
+
+
+## Qualification for new particle training
+
+A native training owner supplies the shared `CandidateGuard` for text and a
+finished-output probe through `train_particle(..., guard=..., finished_probe=...)`.
+The probe receives the runner, its current slider, and the committed FULL
+checkpoint identity. The owner retains the actual finished text and preserves
+the live model and RNG during observation. Assessments happen at the quarter
+boundaries. To resume, supply the exact `assessed-full-*.pt` file that passed
+at that boundary. The search API takes a `guard_for(config)` callback and the
+same probe, and checks the final assessed FULL checkpoint before selection.
+
+A native finished-text qualification and probe still need to be bound for
+this deployment. Native training without them fails before loading the model.

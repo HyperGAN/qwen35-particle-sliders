@@ -167,3 +167,17 @@ def test_training_export_and_interrupted_resume_match(api, tmp_path, monkeypatch
     assert contract['formulation']['pg_version'] == '0.11.0'
     assert contract['formulation']['recipe']['name'] == 'bispf_optimized'
     assert contract['formulation']['penalty_input_domain'] == 'continuous'
+
+
+def test_unqualified_native_training_is_blocked_before_loading(tmp_path, monkeypatch):
+    from particle_sliders.candidate_failure import GuardUnmeasured
+    from qwen35_sliders import training
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("unqualified run reached the native loader")
+
+    monkeypatch.setattr(training, "load_host", forbidden)
+    run = tmp_path / "unqualified"
+    with pytest.raises(GuardUnmeasured, match="finished-text probe"):
+        training.train_particle({"output": str(run), "device": "cuda"})
+    assert not run.exists()
