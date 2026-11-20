@@ -181,3 +181,64 @@ def test_unqualified_native_training_is_blocked_before_loading(tmp_path, monkeyp
     with pytest.raises(GuardUnmeasured, match="finished-text probe"):
         training.train_particle({"output": str(run), "device": "cuda"})
     assert not run.exists()
+
+
+def test_failed_quarter_probe_blocks_next_update_and_resume(tmp_path, monkeypatch):
+    from dataclasses import asdict
+    import json
+
+    from particle_sliders.candidate_failure import (
+        CandidateFailure, CandidateGuard, FileRecord, FinishedOutput,
+        ObservationCache, QualifiedDetector,
+    )
+    from qwen35_sliders import training
+
+    def write(name, value):
+        path = tmp_path / name
+        path.write_text(json.dumps(value))
+        return FileRecord.from_path(path)
+
+    contract = write("synthetic-contract.json", {"scope": "CPU test fixture"})
+    instrument = {"name": "synthetic text test observer", "source": "test_host.py"}
+    qualification = write("synthetic-qualification.json", dict(
+        schema="Universal-catastrophic-detector-actual-qualification-v1",
+        accepted=True, qualified=True, detector_contract=asdict(contract),
+        actual_instrument_source=instrument, judgment_kind="categorical", covered_media=["text"],
+    ))
+    detector = QualifiedDetector(contract, instrument, qualification, "categorical")
+
+    def observe(source, media, native):
+        return dict(status="fail", reason="synthetic test judgment",
+                    failure_probability=None, categorical_failure=True, output_source=asdict(source),
+                    detector_contract=asdict(contract), actual_instrument_source=instrument)
+
+    guard = CandidateGuard(tmp_path / "candidate.json", candidate_id="test-candidate",
+                           scientific_protocol={"scope": "synthetic"}, media="text",
+                           cache=ObservationCache(tmp_path / "observations", detector, observe))
+    data = write("dummy-data.json", {key: [0, 1] for key in ("train", "dev", "calibration")})
+    monkeypatch.setattr(training, "token_rows", lambda *args, **kwargs: [
+        dict(ids=[1, 2, 3], positive_ids=[1, 2, 7]),
+        dict(ids=[2, 3, 4], positive_ids=[2, 3, 7]),
+    ])
+    runner = (SimpleNamespace(model=TinyQwen(), tokenizer=None), {"parent": "synthetic"})
+    output = tmp_path / "run"
+    options = dict(data=data.path, output=str(output), device="cpu", steps=4, batch=2, lr=1e-5)
+    calls = []
+
+    def probe(runner, slider, checkpoint):
+        checkpoint.verify()
+        calls.append(torch.load(checkpoint.path, weights_only=True)["step"])
+        text = write("synthetic-output.json", {"text": "test response"})
+        return [FinishedOutput(text, "text", {"scope": "synthetic"})]
+
+    with pytest.raises(CandidateFailure):
+        training.train_particle(options, runner=runner, guard=guard, finished_probe=probe)
+    assert calls == [1]
+    assert (output / "assessed-full-000001.pt").is_file()
+    assert not (output / "result.json").exists()
+    assert len((output / "metrics.jsonl").read_text().splitlines()) == 1
+    with pytest.raises(CandidateFailure):
+        training.train_particle(options | {"output": str(tmp_path / "resume"),
+            "resume": str(output / "assessed-full-000001.pt")}, runner=runner,
+            guard=guard, finished_probe=probe)
+    assert not (tmp_path / "resume").exists()
