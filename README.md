@@ -1,6 +1,6 @@
 # Particle sliders for Qwen3.5
 
-**Calculated memory:** BF16 particle training: **12 GiB GPU / 12 GiB host** at batch 4/384 tokens; bounded 2048-total sampling: **8 GiB GPU**. Legacy EMA behavior is separately flagged. [Full memory ledger and limits](MEMORY.md). These are planning estimates, not measured peaks.
+**Calculated memory:** BF16 particle training: **12 GiB GPU / 12 GiB host** at batch 4/384 tokens; bounded 2048-total sampling: **8 GiB GPU**. Current training uses raw weights. [Full memory ledger and limits](MEMORY.md). These are planning estimates, not measured peaks.
 
 This project trains a **particle slider**: a learned adjustment to Qwen3.5-0.8B
 whose strength can be turned up or down. The aim is to improve the model's
@@ -11,7 +11,7 @@ achieved that yet. Nothing has been submitted to Delta League, and the research
 PR is closed.** The last training run has finished; no training job is currently
 running from this project session.
 
-Current training code uses **ParticleGAN 0.9.5 through the shared
+Current training code uses **ParticleGAN 0.11.0 through the shared
 [particle-sliders core](https://github.com/HyperGAN/particle-sliders)**. The
 results below belong to the earlier v0.1.0 experiment; the dependency update does
 not establish a new model result.

@@ -92,7 +92,7 @@ def test_actual_upstream_step_and_distillation(api):
         assert record["step"] == 1 and record["prior_regularization"] >= 0
         assert not torch.equal(before, slider.particles)
         packet = game.state_dict()
-        assert packet["config"]["pg_version"] == "0.9.5"
+        assert packet["config"]["pg_version"] == "0.11.0"
         assert packet["config"]["penalty_input_domain"] == "continuous"
         expected = game.step()
         game.load_state_dict(packet)
@@ -119,7 +119,7 @@ def test_actual_upstream_step_and_distillation(api):
 
 
 def test_training_export_and_interrupted_resume_match(api, tmp_path, monkeypatch):
-    """Exercise the actual training entrypoint, checkpoint, EMA and student export."""
+    """Exercise the actual training entrypoint, checkpoint and raw-weight student export."""
     import json
     from safetensors.torch import load_file
     import qwen35_sliders.training as training_module
@@ -164,6 +164,6 @@ def test_training_export_and_interrupted_resume_match(api, tmp_path, monkeypatch
         assert left.keys() == right.keys()
         assert all(torch.equal(left[k], right[k]) for k in left)
     contract = json.loads((resumed/'contract.json').read_text())
-    assert contract['formulation']['pg_version'] == '0.9.5'
+    assert contract['formulation']['pg_version'] == '0.11.0'
     assert contract['formulation']['recipe']['name'] == 'bispf_optimized'
     assert contract['formulation']['penalty_input_domain'] == 'continuous'

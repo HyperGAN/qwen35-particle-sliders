@@ -78,6 +78,6 @@ def evaluate_math(workspace, output, *, deltas=None, strength=1., norm_gain=1.,
         validation_score=statistics.mean(r["score"] for r in records)*100,
         validation_benchmarks=dict(gsm8k=statistics.mean(r["score"] for r in records)*100),
         truncation_rate=statistics.mean(r["truncated"] for r in records), coverage=dict(examples=len(records), full_official_suite=False),
-        runtime=provenance["runtime"], protocol=protocol, note="Local GSM8K subset with explicit generation cap; advisory only.")
+        runtime=provenance["runtime"], protocol=protocol, generations_sha256=digest(generations), note="Local GSM8K subset with explicit generation cap; advisory only.")
     write_json(output, result)
     return result

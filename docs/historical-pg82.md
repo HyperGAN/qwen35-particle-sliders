@@ -1,8 +1,8 @@
 # Historical v0.1.0 experiment (ParticleGAN 0.6.0)
 
 This documents the original completed run and its isolated environment. Current
-training uses ParticleGAN 0.9.5; see [current reproduction](technical.md).
-Do not use these historical dependency pins for a new 0.9.5 run.
+training uses ParticleGAN 0.11.0; see [current reproduction](technical.md).
+Do not use these historical dependency pins for a new 0.11.0 run.
 
 # Technical details and reproduction
 
