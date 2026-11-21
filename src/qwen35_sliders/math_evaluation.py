@@ -1,4 +1,5 @@
 """Bounded generated-answer comparison on manifest-selected public GSM8K rows."""
+from contextlib import nullcontext
 import hashlib
 import json
 from pathlib import Path
@@ -12,17 +13,23 @@ from .evaluation import document_hash
 
 def evaluate_math(workspace, output, *, deltas=None, strength=1., norm_gain=1.,
                   limit=16, max_tokens=1024, teacher=None, upstream=None, device="cuda",
-                  offset=0, seed=1000):
+                  offset=0, seed=1000, step_gains=None):
     from datasets import load_dataset
     from safetensors.torch import load_file
     from delta_cli.local import read_workspace
     from delta_cli.scoring import score_answer
     from .training import load_host
     from .candidate import applied_teacher
+    from .token_strength import cached_strengths, resolve
     if deltas and teacher:
         raise ValueError("Choose merged deltas or nonlinear teacher")
     if not 1 <= limit <= 64 or not 1 <= max_tokens <= 8192:
         raise ValueError("Declared local evaluation cap exceeded")
+    strengths = None
+    if step_gains is not None:
+        if teacher is None:
+            raise ValueError("Token schedules require an explicit nonlinear RAW teacher")
+        strengths = resolve(strength, max_tokens, step_gains)
     if type(offset) is not int or offset < 0 or type(seed) is not int or not 0 <= seed < 2**63:
         raise ValueError("Use a nonnegative selection offset and seed in [0, 2**63)")
     output = Path(output)
@@ -58,10 +65,16 @@ def evaluate_math(workspace, output, *, deltas=None, strength=1., norm_gain=1.,
             p.copy_(((p.float()+1)*norm_gain-1).to(p.dtype))
     generation = dict(config["generation"], max_tokens=max_tokens)
     records = []
-    with applied_teacher(runner.model, teacher, strength, upstream) as teacher_identity:
+    with applied_teacher(runner.model, teacher, strength, upstream, expose_slider=True) as (teacher_identity, slider):
         with generations.open("x") as stream:
             for index, doc in zip(indices, docs):
-                response = runner.generate(doc["question"], generation, seed)
+                schedule = nullcontext() if strengths is None else cached_strengths(runner.model, slider, strengths)
+                with schedule as applied:
+                    response = runner.generate(doc["question"], generation, seed)
+                if applied is not None:
+                    if len(applied) != response["tokens"]:
+                        raise RuntimeError("Qwen3.5 scheduled calls differ from generated token count")
+                    response["effective_strengths"] = applied
                 gold = doc["answer"].rsplit("####", 1)[-1].strip()
                 score = score_answer(dict(scorer="math", answer=gold), response["text"])
                 record = dict(benchmark="gsm8k", example_index=index, sample=0, score=score, **response)
@@ -79,5 +92,7 @@ def evaluate_math(workspace, output, *, deltas=None, strength=1., norm_gain=1.,
         validation_benchmarks=dict(gsm8k=statistics.mean(r["score"] for r in records)*100),
         truncation_rate=statistics.mean(r["truncated"] for r in records), coverage=dict(examples=len(records), full_official_suite=False),
         runtime=provenance["runtime"], protocol=protocol, generations_sha256=digest(generations), note="Local GSM8K subset with explicit generation cap; advisory only.")
+    if step_gains is not None:
+        result["artifact"]["step_gains"] = list(step_gains)
     write_json(output, result)
     return result

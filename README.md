@@ -150,3 +150,13 @@ same probe, and checks the final assessed FULL checkpoint before selection.
 
 A native finished-text qualification and probe still need to be bound for
 this deployment. Native training without them fails before loading the model.
+
+## Scheduled strength for local math evaluation
+
+`qwen35-slider evaluate-math` accepts `--step-gains` with a JSON array of
+`--max-tokens` gains when using a nonlinear RAW `--teacher`. The first gain
+applies during prompt prefill. Later gains follow the native KV-cache positions.
+Each response records the strengths applied through native termination. Use
+the same benchmark slice, seed and generation settings for matched comparisons.
+The native CPU generation fixture verifies gain order. Pretrained answer gains
+are pending.

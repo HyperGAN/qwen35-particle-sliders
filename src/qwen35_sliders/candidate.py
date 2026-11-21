@@ -9,9 +9,9 @@ from .upstream import load
 
 
 @contextmanager
-def applied_teacher(model, path, strength, upstream=None):
+def applied_teacher(model, path, strength, upstream=None, *, expose_slider=False):
     if path is None:
-        yield None
+        yield (None, None) if expose_slider else None
         return
     with safe_open(str(path), framework="pt", device="cpu") as artifact:
         if (artifact.metadata() or {}).get("weights_kind") != "raw":
@@ -21,6 +21,6 @@ def applied_teacher(model, path, strength, upstream=None):
     try:
         slider.load_state_dict(load_file(str(path)), strict=True)
         with slider.scaled(strength):
-            yield api.identity
+            yield (api.identity, slider) if expose_slider else api.identity
     finally:
         slider.close()
