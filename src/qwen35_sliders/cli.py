@@ -46,11 +46,14 @@ def main():
     math.add_argument("--deltas")
     math.add_argument("--teacher")
     math.add_argument("--upstream")
-    math.add_argument("--strength", type=float, default=1.)
+    math.add_argument("--strength", type=float, help="Explicit calibrated strength for adaptive steering")
     math.add_argument("--norm-gain", type=float, default=1.)
     math.add_argument("--limit", type=int, default=16)
     math.add_argument("--max-tokens", type=int, default=1024)
-    math.add_argument("--step-gains", type=json.loads, help="JSON array with one gain per possible token")
+    schedule = math.add_mutually_exclusive_group()
+    schedule.add_argument("--step-gains", type=json.loads, help="JSON array with one gain per possible token")
+    schedule.add_argument("--steering-plan", type=Path, help="Explicit calibrated adaptive steering JSON")
+    math.add_argument("--steering-core", type=Path, help="Local shared core #269 wheel for adaptive steering")
     math.add_argument("--offset", type=int, default=0)
     math.add_argument("--seed", type=int, default=1000)
     args = parser.parse_args()
@@ -74,7 +77,8 @@ def main():
         print(json.dumps(evaluate_math(args.workspace, args.output, deltas=args.deltas,
             teacher=args.teacher, upstream=args.upstream, strength=args.strength, norm_gain=args.norm_gain,
             limit=args.limit, max_tokens=args.max_tokens, offset=args.offset, seed=args.seed,
-            step_gains=args.step_gains), indent=2))
+            step_gains=args.step_gains, steering_plan=args.steering_plan,
+            steering_core=args.steering_core), indent=2))
     elif args.command == "search":
         from .search import search
         search(json.loads(Path(args.config).read_text()))
