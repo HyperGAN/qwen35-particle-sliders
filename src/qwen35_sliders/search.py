@@ -30,6 +30,8 @@ def checked_result(config, upstream):
         raise ValueError('Cached result lacks raw held-out metric identity')
     if result.get('steps') != config['steps'] or result.get('completed_steps') != config['steps']:
         raise ValueError('Run did not complete the declared training horizon')
+    if result.get('raw_sha256') != digest(root/'particle.safetensors'):
+        raise ValueError('Cached RAW artifact differs from the completed run')
     off = result['initial']
     for key in ('raw', 'student'):
         values = result[key]
@@ -75,7 +77,7 @@ def finished_answers(workspace, path, development, *, device, teacher=None):
 
 
 def search(spec, *, guard_for=None, finished_probe=None):
-    from particle_sliders.candidate_failure import CandidateGuard, FileRecord, GuardUnmeasured
+    from particle_sliders.candidate_failure import CandidateFailure, CandidateGuard, FileRecord, GuardUnmeasured
 
     guarded = guard_for is not None or finished_probe is not None
     if guarded and (not callable(guard_for) or not callable(finished_probe)):
@@ -132,7 +134,12 @@ def search(spec, *, guard_for=None, finished_probe=None):
         return result, comparison
 
     for index, config in enumerate(configs):
-        result, comparison = run(config, root/f'trial-{index:02d}.json', root/f'trial-{index:02d}.log')
+        try:
+            result, comparison = run(config, root/f'trial-{index:02d}.json', root/f'trial-{index:02d}.log')
+        except CandidateFailure as failure:
+            records.append(dict(index=index, config=config, status='catastrophic_failure',
+                                reason=str(failure), intended_effect=None))
+            continue
         if reference is None:
             reference = comparison
         elif reference != comparison:
@@ -143,10 +150,14 @@ def search(spec, *, guard_for=None, finished_probe=None):
         records.append(dict(index=index, config=config, result=result,
                             student_relative_rms=ratio, student_relative_sse=relative_sse))
         print(json.dumps(dict(trial=index, student_relative_rms=ratio)), flush=True)
+    eligible = [record for record in records if record.get('status') != 'catastrophic_failure']
+    if not eligible:
+        write_json(root/'search-results.json', records)
+        return
     workspace = base['workspace']
     device = base.get('device', 'cuda')
     off, output_reference = finished_answers(workspace, root/'development-off.json', development, device=device)
-    for record in records:
+    for record in eligible:
         trial_root = Path(record['config']['output'])
         on, identity = finished_answers(workspace, trial_root/'development-on.json', development,
                                         device=device, teacher=trial_root/'particle.safetensors')
@@ -156,10 +167,10 @@ def search(spec, *, guard_for=None, finished_probe=None):
                                      else mean(on_score - off_score for on_score, off_score in zip(on, off, strict=True)))
 
     write_json(root/'search-results.json', records)
-    if any(record['intended_effect'] is None for record in records):
+    if any(record['intended_effect'] is None for record in eligible):
         return
-    top = max(record['intended_effect'] for record in records)
-    winners = [record for record in records if record['intended_effect'] == top]
+    top = max(record['intended_effect'] for record in eligible)
+    winners = [record for record in eligible if record['intended_effect'] == top]
     if len(winners) > 1:
         write_json(root/'selected.json', dict(trials=[record['index'] for record in winners],
                                              intended_effect=top))
