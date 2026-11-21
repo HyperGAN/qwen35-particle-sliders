@@ -11,7 +11,7 @@ achieved that yet. Nothing has been submitted to Delta League, and the research
 PR is closed.** The last training run has finished; no training job is currently
 running from this project session.
 
-Current training code uses **ParticleGAN 0.11.0 through the shared
+Current training code uses **ParticleGAN 0.11.1 through the shared
 [particle-sliders core](https://github.com/HyperGAN/particle-sliders)**. The
 results below belong to the earlier v0.1.0 experiment; the dependency update does
 not establish a new model result.
@@ -85,7 +85,7 @@ trained adapter with different strength settings.
 
 **The project remains focused on particle sliders. The supervised comparison
 is not a replacement for that goal or a fallback submission.** Its historical
-results are retained in the [experiment record](evidence/final-experiment.json).
+results are retained in the [experiment record](https://github.com/HyperGAN/qwen35-particle-sliders/blob/97f5d7e9d648c4f4408a0a4770e630b1a2bffe2e/evidence/final-experiment.json).
 
 ## What did we train, and did it work?
 
@@ -123,8 +123,8 @@ the original model under matched evaluation conditions.**
 
 - [Technical details and reproduction commands](docs/technical.md): installation,
   particle training, the separate supervised comparison, export, and evaluation.
-- [Complete experiment record](evidence/final-experiment.json): scores, settings,
-  source versions, and artifact hashes for all experiments.
+- [Complete experiment record](https://github.com/HyperGAN/qwen35-particle-sliders/blob/97f5d7e9d648c4f4408a0a4770e630b1a2bffe2e/evidence/final-experiment.json): scores, settings,
+  source versions, and artifact hashes for the historical experiment.
 - [Experimental model files](https://github.com/HyperGAN/qwen35-particle-sliders/releases/tag/v0.1.0):
   saved particle teacher, distilled adapter, and supervised comparison adapter.
   These are research artifacts; they are not recommended submissions.

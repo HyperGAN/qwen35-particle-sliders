@@ -36,7 +36,7 @@ def test_teacher_exact_off_and_hooks_restored_after_evaluation_failure(teacher):
     before = hidden(model, [1,2,3]).detach()
     flags = [p.requires_grad for p in model.parameters()]
     with applied_teacher(model, path, 0) as identity:
-        assert identity['particlegan_version'] == '0.11.0'
+        assert identity['particlegan_version'] == '0.11.1'
         assert torch.equal(hidden(model, [1,2,3]), before)
     with pytest.raises(RuntimeError, match='evaluation failure'):
         with applied_teacher(model, path, 1):
@@ -150,4 +150,4 @@ def test_likelihood_teacher_is_active_for_the_actual_evaluator(tmp_path, monkeyp
     assert not torch.equal(observed[1],original)
     assert torch.equal(hidden(model,[1,2,3]),original)
     assert off['validation_sha256'] == on['validation_sha256']
-    assert on['artifact']['teacher_engine']['particlegan_version'] == '0.11.0'
+    assert on['artifact']['teacher_engine']['particlegan_version'] == '0.11.1'

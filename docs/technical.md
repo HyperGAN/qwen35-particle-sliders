@@ -1,8 +1,8 @@
-# Training with ParticleGAN 0.11.0
+# Training with ParticleGAN 0.11.1
 
 Run these commands from the repository root. The command-line API is unchanged;
 new particle runs use the shared `particle-sliders-core` 0.13 engine and published
-`particlegan==0.11.0`. They use a fresh output directory and cannot resume the
+`particlegan==0.11.1`. They use a fresh output directory and cannot resume the
 historical 0.6.0 experiment. No new benchmark result is claimed by this update.
 
 ## Install and prepare
@@ -47,7 +47,7 @@ Qwen supplies paired hidden responses, with and without worked-solution context.
 The critic receives the paired response error plus noise, conditioned on the
 normalized frozen neutral response. Error is divided by the training set's
 scalar RMS edit size. The model's full hidden width is retained and explicitly
-declared `continuous`; ParticleGAN 0.11.0 supports this without reshaping it or
+declared `continuous`; ParticleGAN 0.11.1 supports this without reshaping it or
 interpreting it as categorical. The critic emits raw logits.
 
 Each run writes its resolved upstream recipe, exact source identities, data/model
@@ -72,11 +72,11 @@ student; it does not prove that the student equals the teacher.
 
 ```sh
 qwen35-slider build --workspace experiment \
-  --deltas runs/particle-search-engine-v1/final/deltas.safetensors \
+  --deltas runs/particle-search-pg0111-v1/final/deltas.safetensors \
   --strength 1 --output runs/particle-engine-patch
 delta validate runs/particle-engine-patch
 qwen35-slider verify-candidate --workspace experiment \
-  --deltas runs/particle-search-engine-v1/final/deltas.safetensors \
+  --deltas runs/particle-search-pg0111-v1/final/deltas.safetensors \
   --patch runs/particle-engine-patch
 ```
 
@@ -85,7 +85,7 @@ qwen35-slider verify-candidate --workspace experiment \
 ```sh
 qwen35-slider evaluate-likelihood --workspace experiment --output runs/eval/base.json
 qwen35-slider evaluate-likelihood --workspace experiment \
-  --deltas runs/particle-search-engine-v1/final/deltas.safetensors --output runs/eval/particle.json
+  --deltas runs/particle-search-pg0111-v1/final/deltas.safetensors --output runs/eval/particle.json
 delta compare runs/eval/base.json runs/eval/particle.json --output runs/eval/comparison.json
 ```
 

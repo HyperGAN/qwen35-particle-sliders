@@ -1,6 +1,6 @@
 # Goal: a particle slider that beats the original Qwen model
 
-Train and tune a particle slider for Qwen3.5-0.8B using ParticleGAN 0.11.0 through
+Train and tune a particle slider for Qwen3.5-0.8B using ParticleGAN 0.11.1 through
 `particle-sliders-core` 0.13.0. Keep the original model weights frozen. Find a
 promising slider, compare it with the slider OFF on real questions, and produce
 a verified weight patch only if the particle-derived model demonstrates a clear,
@@ -14,9 +14,9 @@ not a fallback for this goal. Do not submit without that win.
 - The shared suite passed 584 CPU tests; 27 were skipped. This project's three
   integration tests passed, including exact continuation and adapter export.
 - Historical training and exports exist, but the old particle candidate did not
-  demonstrate better answers. Those results are not results for ParticleGAN 0.11.0.
+  demonstrate better answers. Those results are not results for ParticleGAN 0.11.1.
 
-No new 0.11.0 native training or quality evaluation has completed. The earlier
+No new 0.11.1 native training or quality evaluation has completed. The earlier
 research PR is closed. Native GPU resource coordination is pending with Ember;
 use a fresh run directory and the new environment for the next admitted run.
 
@@ -70,11 +70,11 @@ on the current workstation it is `/ml2/deltaleague/.venv-engine`.
 
 ```sh
 qwen35-slider evaluate-math --workspace experiment \
-  --teacher runs/particle-search-engine-v1/final/particle.safetensors \
+  --teacher runs/particle-search-pg0111-v1/final/particle.safetensors \
   --strength 0 --limit 16 --offset 0 --seed 1000 --max-tokens 8192 \
   --output runs/eval/engine-teacher-off.json
 qwen35-slider evaluate-math --workspace experiment \
-  --teacher runs/particle-search-engine-v1/final/particle.safetensors \
+  --teacher runs/particle-search-pg0111-v1/final/particle.safetensors \
   --strength 1 --limit 16 --offset 0 --seed 1000 --max-tokens 8192 \
   --output runs/eval/engine-teacher-on.json
 delta compare runs/eval/engine-teacher-off.json runs/eval/engine-teacher-on.json \
@@ -101,11 +101,11 @@ regressions before and after distillation:
 
 ```sh
 qwen35-slider evaluate-likelihood --workspace experiment \
-  --teacher runs/particle-search-engine-v1/final/particle.safetensors \
+  --teacher runs/particle-search-pg0111-v1/final/particle.safetensors \
   --strength 0 --tasks arc_challenge arc_easy boolq commonsense_qa hellaswag openbookqa piqa winogrande mmlu \
   --output runs/eval/engine-teacher-likelihood-off.json
 qwen35-slider evaluate-likelihood --workspace experiment \
-  --teacher runs/particle-search-engine-v1/final/particle.safetensors \
+  --teacher runs/particle-search-pg0111-v1/final/particle.safetensors \
   --strength 1 --tasks arc_challenge arc_easy boolq commonsense_qa hellaswag openbookqa piqa winogrande mmlu \
   --output runs/eval/engine-teacher-likelihood-on.json
 delta compare runs/eval/engine-teacher-likelihood-off.json runs/eval/engine-teacher-likelihood-on.json

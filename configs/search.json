@@ -1,5 +1,5 @@
 {
-  "output": "/ml2/deltaleague/runs/particle-search-engine-v1",
+  "output": "/ml2/deltaleague/runs/particle-search-pg0111-v1",
   "development": {"offset": 0, "limit": 16, "seed": 1000, "max_tokens": 8192},
   "base": {
     "ema_decay": null,
