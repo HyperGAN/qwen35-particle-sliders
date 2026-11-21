@@ -145,7 +145,7 @@ The probe receives the runner, its current slider, and the committed FULL
 checkpoint identity. The owner retains the actual finished text and preserves
 the live model and RNG during observation. Assessments happen at the quarter
 boundaries. To resume, supply the exact `assessed-full-*.pt` file that passed
-at that boundary. The search API takes a `guard_for(config)` callback and the
+at that boundary and choose a new output directory to preserve earlier artifacts. The search API takes a `guard_for(config)` callback and the
 same probe, and checks the final assessed FULL checkpoint before selection.
 
 A native finished-text qualification and probe still need to be bound for

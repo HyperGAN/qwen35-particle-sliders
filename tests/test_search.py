@@ -109,3 +109,36 @@ def test_search_rejects_a_different_off_baseline(search_fixture):
     with pytest.raises(ValueError,match='ON/OFF baselines'):
         search_module.search(spec)
     assert len(calls)==3
+
+
+def test_cached_search_refuses_replaced_raw_weights(search_fixture):
+    spec, calls = search_fixture
+    search_module.search(spec)
+    raw = Path(spec['output']) / 'trial-00' / 'particle.safetensors'
+    replacement = Path(spec['output']) / 'trial-01' / 'particle.safetensors'
+    raw.write_bytes(replacement.read_bytes())
+    with pytest.raises(ValueError, match='Cached RAW artifact differs'):
+        search_module.search(spec)
+    assert len(calls) == 3
+
+
+def test_failed_candidate_does_not_prevent_testing_other_candidates(search_fixture, monkeypatch):
+    from particle_sliders.candidate_failure import CandidateFailure
+
+    spec, calls = search_fixture
+    child = search_module.subprocess.run
+
+    def fail_first(args, **kwargs):
+        config = json.loads(Path(args[-1]).read_text())
+        if Path(config["output"]).name == "trial-00":
+            raise CandidateFailure("Finished text failed")
+        child(args, **kwargs)
+
+    monkeypatch.setattr(search_module.subprocess, "run", fail_first)
+    search_module.search(spec)
+    root = Path(spec["output"])
+    results = json.loads((root / "search-results.json").read_text())
+    assert results[0]["status"] == "catastrophic_failure"
+    assert not (root / "trial-00/development-on.json").exists()
+    assert json.loads((root / "selected.json").read_text())["trial"] == 1
+    assert [Path(config["output"]).name for config in calls] == ["trial-01", "final"]

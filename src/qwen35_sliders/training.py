@@ -86,9 +86,9 @@ def train_particle(config, *, runner=None, guard=None, finished_probe=None):
         guard.require_selection(resume_source)
     api = load(config.get("upstream"))
     output = Path(config["output"])
-    output.mkdir(parents=True, exist_ok=True)
-    if (output / "result.json").exists():
-        raise FileExistsError("Completed run exists; select another output")
+    if type(config.get("steps")) is not int or config["steps"] < 1:
+        raise ValueError("Particle training requires a positive integer step budget")
+    output.mkdir(parents=True)
     torch.set_num_threads(config.get("cpu_threads", 4))
     torch.manual_seed(config.get("seed", 7))
     runner, identity = load_host(config["workspace"], config.get("device", "cuda")) if runner is None else runner
@@ -170,10 +170,13 @@ def train_particle(config, *, runner=None, guard=None, finished_probe=None):
                         approved_checkpoint = saved
                     print(json.dumps({k:record[k] for k in ("step", "g_adv", "d_loss", "particle_grad_norm", "elapsed_seconds")}), flush=True)
         if guard is not None:
+            approved_checkpoint.verify()
             guard.require_selection(approved_checkpoint)
         raw_metrics = metrics(model, slider, development)
+        raw_path = output / "particle.safetensors"
         save_file({k:v.detach().cpu().contiguous() for k,v in slider.state_dict().items()},
-                  str(output / "particle.safetensors"), metadata={"weights_kind": "raw"})
+                  str(raw_path), metadata={"weights_kind": "raw"})
+        raw_sha256 = digest(raw_path)
         student, calibration = distill(slider, model, [r["ids"] for r in splits["calibration"]], api,
                                        rows=config.get("calibration_rows", 256))
         save_file(student, str(output / "distilled.safetensors"))
@@ -190,6 +193,7 @@ def train_particle(config, *, runner=None, guard=None, finished_probe=None):
                       selected="raw", student=student_metrics, initial=initial,
                       targets=names, elapsed_seconds=time.monotonic()-start,
                       contract_sha256=digest(output / "contract.json"),
+                      raw_sha256=raw_sha256,
                       deltas_sha256=digest(output / "deltas.safetensors"))
         if approved_checkpoint is not None:
             result["assessed_full"] = asdict(approved_checkpoint)
