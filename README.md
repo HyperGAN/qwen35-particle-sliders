@@ -160,3 +160,50 @@ Each response records the strengths applied through native termination. Use
 the same benchmark slice, seed and generation settings for matched comparisons.
 The native CPU generation fixture verifies gain order. Pretrained answer gains
 are pending.
+
+### Activation-dependent strength
+
+Pass an explicit calibration plan and a local wheel built from shared
+[core #269](https://github.com/HyperGAN/particle-sliders/pull/269). The evaluator
+verifies the two standalone steering modules by source hash and keeps the
+installed training and RAW loader pin used by existing checkpoints.
+
+```sh
+qwen35-slider evaluate-math --workspace "$WORKSPACE" --output "$REPORT" \
+  --strength "$CALIBRATED_STRENGTH" --steering-plan "$STEERING_PLAN_JSON" \
+  --steering-core "$CORE_269_WHEEL"
+```
+
+The plan supplies `layer`, `evidence_ref`, `method`, and `intervention`.
+`layer` is the zero-based native decoder-input layer and `evidence_ref` points
+to the fitting or calibration evidence for that layer and base. Supply the
+unit `direction` and the calibrated `parameter` for `cfp` or `clabs`. CFP's
+parameter is its alignment threshold. CLABS's parameter is its bias, and its
+plan also supplies `seed` and all shared `CLABSParameters` in `clabs`.
+`random` takes a measured matching firing rate and explicit seed. A direct
+random edit also needs a direction. For direct residual gates, optional
+`preserve_norm` and `projection_bounds` enable the paper's corrections.
+
+With `intervention` set to `residual`, the edit acts on the final row of
+prefill that predicts the first response token and on each subsequent cached
+row. Use `method` set to `s_psr` with `weights` and `weights_sha256` for a
+fitted shared `PromptSteering` state dictionary in safetensors format. Declare
+`weights_kind` as `raw` and `ema_decay` as `null`. `weights` is relative to
+the plan. The file contains `probe.weight`, `probe.bias`, and
+`direction.weight` for the selected decoder width.
+
+The separate `raw_adapter` intervention requires `--teacher` and reads layer
+0 before its adapter projections. Prefill stays OFF and each later answer
+prediction uses one gate decision for the whole RAW adapter. This applies
+the shared gate to the existing adapter's edit. Use a separate OFF run and
+recorded fixed-strength replay with matched inputs. Direct residual plans run
+on the frozen base. Use each plan independently of `--step-gains`, merged
+deltas, and norm edits.
+
+Each answer records actual cache positions, effective strengths, and gate
+usage through native EOS. Each report records the plan digest, shared source
+revision and supplied evidence reference. Fit direction or PSR before
+evaluation. Choose the gate's budget on disjoint active calibration
+rollouts, then compare finished answers on matched held-out cases. No
+Qwen3.5 adaptive gains have been measured in the managed native runtime.
+[Shared equations and calibration](https://github.com/HyperGAN/particle-sliders/blob/b1f780decc516808cfd3019d5e5b674457161f86/docs/strength-schedules.md).

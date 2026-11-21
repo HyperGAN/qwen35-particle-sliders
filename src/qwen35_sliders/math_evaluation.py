@@ -11,9 +11,9 @@ from .data import digest, write_json
 from .evaluation import document_hash
 
 
-def evaluate_math(workspace, output, *, deltas=None, strength=1., norm_gain=1.,
+def evaluate_math(workspace, output, *, deltas=None, strength=None, norm_gain=1.,
                   limit=16, max_tokens=1024, teacher=None, upstream=None, device="cuda",
-                  offset=0, seed=1000, step_gains=None):
+                  offset=0, seed=1000, step_gains=None, steering_plan=None, steering_core=None):
     from datasets import load_dataset
     from safetensors.torch import load_file
     from delta_cli.local import read_workspace
@@ -25,11 +25,25 @@ def evaluate_math(workspace, output, *, deltas=None, strength=1., norm_gain=1.,
         raise ValueError("Choose merged deltas or nonlinear teacher")
     if not 1 <= limit <= 64 or not 1 <= max_tokens <= 8192:
         raise ValueError("Declared local evaluation cap exceeded")
+    if strength is None:
+        if steering_plan is not None or steering_core is not None:
+            raise ValueError("Adaptive steering requires explicit calibrated strength")
+        strength = 1.
     strengths = None
     if step_gains is not None:
         if teacher is None:
             raise ValueError("Token schedules require an explicit nonlinear RAW teacher")
         strengths = resolve(strength, max_tokens, step_gains)
+    plan = None
+    if steering_plan is not None or steering_core is not None:
+        if steering_plan is None or steering_core is None or strengths is not None:
+            raise ValueError("Adaptive steering requires a plan and core wheel, independently of fixed token gains")
+        if deltas is not None or norm_gain != 1.:
+            raise ValueError("Use the calibrated base with adaptive steering")
+        from .adaptive_strength import CachedSteering, SteeringPlan
+        plan = SteeringPlan(steering_plan, steering_core, strength)
+        if (plan.intervention == "raw_adapter") != (teacher is not None):
+            raise ValueError("Provide a nonlinear RAW teacher only for the raw_adapter intervention")
     if type(offset) is not int or offset < 0 or type(seed) is not int or not 0 <= seed < 2**63:
         raise ValueError("Use a nonnegative selection offset and seed in [0, 2**63)")
     output = Path(output)
@@ -65,12 +79,17 @@ def evaluate_math(workspace, output, *, deltas=None, strength=1., norm_gain=1.,
             p.copy_(((p.float()+1)*norm_gain-1).to(p.dtype))
     generation = dict(config["generation"], max_tokens=max_tokens)
     records = []
-    with applied_teacher(runner.model, teacher, strength, upstream, expose_slider=True) as (teacher_identity, slider):
+    teacher_strength = strength if plan is None else 0.
+    with applied_teacher(runner.model, teacher, teacher_strength, upstream, expose_slider=True) as (teacher_identity, slider):
+        adaptive = CachedSteering(runner.model, slider, plan, max_tokens) if plan is not None else None
         with generations.open("x") as stream:
             for index, doc in zip(indices, docs):
                 schedule = nullcontext() if strengths is None else cached_strengths(runner.model, slider, strengths)
-                with schedule as applied:
+                with (adaptive.request() if adaptive is not None else schedule) as applied:
                     response = runner.generate(doc["question"], generation, seed)
+                if adaptive is not None:
+                    response["adaptive_steering"] = applied
+                    applied = applied["effective_strengths"]
                 if applied is not None:
                     if len(applied) != response["tokens"]:
                         raise RuntimeError("Qwen3.5 scheduled calls differ from generated token count")
@@ -94,5 +113,7 @@ def evaluate_math(workspace, output, *, deltas=None, strength=1., norm_gain=1.,
         runtime=provenance["runtime"], protocol=protocol, generations_sha256=digest(generations), note="Local GSM8K subset with explicit generation cap; advisory only.")
     if step_gains is not None:
         result["artifact"]["step_gains"] = list(step_gains)
+    if plan is not None:
+        result["artifact"]["adaptive_steering"] = plan.identity
     write_json(output, result)
     return result
