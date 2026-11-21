@@ -1,6 +1,6 @@
 # Particle sliders for Qwen3.5
 
-**Calculated memory:** BF16 particle training: **12 GiB GPU / 12 GiB host** at batch 4/384 tokens; bounded 2048-total sampling: **8 GiB GPU**. Legacy EMA behavior is separately flagged. [Full memory ledger and limits](MEMORY.md). These are planning estimates, not measured peaks.
+**Calculated memory:** BF16 particle training: **12 GiB GPU / 12 GiB host** at batch 4/384 tokens; bounded 2048-total sampling: **8 GiB GPU**. Current training uses raw weights. [Full memory ledger and limits](MEMORY.md). These are planning estimates, not measured peaks.
 
 This project trains a **particle slider**: a learned adjustment to Qwen3.5-0.8B
 whose strength can be turned up or down. The aim is to improve the model's
@@ -11,7 +11,7 @@ achieved that yet. Nothing has been submitted to Delta League, and the research
 PR is closed.** The last training run has finished; no training job is currently
 running from this project session.
 
-Current training code uses **ParticleGAN 0.9.5 through the shared
+Current training code uses **ParticleGAN 0.11.1 through the shared
 [particle-sliders core](https://github.com/HyperGAN/particle-sliders)**. The
 results below belong to the earlier v0.1.0 experiment; the dependency update does
 not establish a new model result.
@@ -85,7 +85,7 @@ trained adapter with different strength settings.
 
 **The project remains focused on particle sliders. The supervised comparison
 is not a replacement for that goal or a fallback submission.** Its historical
-results are retained in the [experiment record](evidence/final-experiment.json).
+results are retained in the [experiment record](https://github.com/HyperGAN/qwen35-particle-sliders/blob/97f5d7e9d648c4f4408a0a4770e630b1a2bffe2e/evidence/final-experiment.json).
 
 ## What did we train, and did it work?
 
@@ -123,8 +123,8 @@ the original model under matched evaluation conditions.**
 
 - [Technical details and reproduction commands](docs/technical.md): installation,
   particle training, the separate supervised comparison, export, and evaluation.
-- [Complete experiment record](evidence/final-experiment.json): scores, settings,
-  source versions, and artifact hashes for all experiments.
+- [Complete experiment record](https://github.com/HyperGAN/qwen35-particle-sliders/blob/97f5d7e9d648c4f4408a0a4770e630b1a2bffe2e/evidence/final-experiment.json): scores, settings,
+  source versions, and artifact hashes for the historical experiment.
 - [Experimental model files](https://github.com/HyperGAN/qwen35-particle-sliders/releases/tag/v0.1.0):
   saved particle teacher, distilled adapter, and supervised comparison adapter.
   These are research artifacts; they are not recommended submissions.
@@ -135,3 +135,18 @@ The training code is in [training.py](src/qwen35_sliders/training.py), the slide
 modules are in [host.py](src/qwen35_sliders/host.py), and the particle search
 settings are in [configs/search.json](configs/search.json). Source attribution
 and dependency versions are in [NOTICE.md](NOTICE.md).
+
+
+## Qualification for new particle training
+
+A native training owner supplies the shared `CandidateGuard` for text and a
+finished-output probe through `train_particle(..., guard=..., finished_probe=...)`.
+The probe receives the runner, its current slider, and the committed FULL
+checkpoint identity. The owner retains the actual finished text and preserves
+the live model and RNG during observation. Assessments happen at the quarter
+boundaries. To resume, supply the exact `assessed-full-*.pt` file that passed
+at that boundary and choose a new output directory to preserve earlier artifacts. The search API takes a `guard_for(config)` callback and the
+same probe, and checks the final assessed FULL checkpoint before selection.
+
+A native finished-text qualification and probe still need to be bound for
+this deployment. Native training without them fails before loading the model.

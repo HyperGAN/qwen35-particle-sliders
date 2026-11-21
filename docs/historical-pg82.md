@@ -1,8 +1,8 @@
 # Historical v0.1.0 experiment (ParticleGAN 0.6.0)
 
 This documents the original completed run and its isolated environment. Current
-training uses ParticleGAN 0.9.5; see [current reproduction](technical.md).
-Do not use these historical dependency pins for a new 0.9.5 run.
+training uses ParticleGAN 0.11.1; see [current reproduction](technical.md).
+Do not use these historical dependency pins for a new 0.11.1 run.
 
 # Technical details and reproduction
 
@@ -64,7 +64,7 @@ exact commit plus algorithm-file hashes before loading it.
 
 This project deliberately uses the reference's isolated **historical PG82**
 dependency, whose package version is 0.6.0. It does not claim to be the modern
-PG0.9.4 Glimmer backend: that backend's current source gates refuse native
+earlier Glimmer backend: that backend's current source gates refuse native
 1024-wide hidden responses. Neither that gate nor the fixture-only admission is
 bypassed here. The historical Glimmer package and its exact dependency remain in
 their own environment. See [NOTICE.md](../NOTICE.md) for pins and attribution.

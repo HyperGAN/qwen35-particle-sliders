@@ -1,6 +1,6 @@
 {
   "schema": "qwen35-particle-evaluation-plan-v1",
-  "status": "predeclared before native PG0.9.5 training/evaluation; not executed",
+  "status": "historical predeclaration for an earlier source cohort; not executed",
   "parent_id": "0ea62f40-7cd8-4d98-9ebb-484192fa05eb",
   "parent_content_hash": "708085f8b44fa704601967f3f771b8ec133d9c91dc4f49bd8c7686bd47d537b8",
   "official_public_manifest_sha256": "996573d687b0d0f1e088f1e918cd153fa0f80cff454a7e9a7ab5ac2eb374d4d2",

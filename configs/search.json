@@ -1,6 +1,8 @@
 {
-  "output": "/ml2/deltaleague/runs/particle-search-pg095-v2",
+  "output": "/ml2/deltaleague/runs/particle-search-pg0111-v1",
+  "development": {"offset": 0, "limit": 16, "seed": 1000, "max_tokens": 8192},
   "base": {
+    "ema_decay": null,
     "workspace": "/ml2/deltaleague/experiment",
     "data": "/ml2/deltaleague/data/gsm-v1.json",
     "scope": "all",

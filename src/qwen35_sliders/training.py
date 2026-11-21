@@ -1,7 +1,8 @@
 """Upstream GAN callbacks and a separately labelled supervised LoRA baseline."""
-from contextlib import contextmanager
+from dataclasses import asdict
 import hashlib
 import json
+import os
 from pathlib import Path
 import time
 
@@ -10,7 +11,7 @@ from safetensors.torch import save_file
 
 from .data import digest, token_rows, write_json
 from .host import Slider, hidden, distill, linear_deltas
-from .particle import make_game, initialize_ema, update_ema
+from .particle import make_game
 
 
 def implementation_identity():
@@ -41,16 +42,6 @@ def load_host(workspace, device="cuda"):
                         provenance=provenance, runtime=runner.details)
 
 
-@contextmanager
-def state(slider, values):
-    previous = {k: v.detach().clone() for k, v in slider.state_dict().items()}
-    slider.load_state_dict(values, strict=True)
-    try:
-        yield
-    finally:
-        slider.load_state_dict(previous, strict=True)
-
-
 @torch.no_grad()
 def prepare(model, slider, rows):
     with slider.scaled(0.):
@@ -75,13 +66,29 @@ def metrics(model, slider, rows):
                 compared_values=count, rows=len(rows))
 
 
-def train_particle(config, *, runner=None):
+def train_particle(config, *, runner=None, guard=None, finished_probe=None):
+    from particle_sliders.candidate_failure import CandidateGuard, FileRecord, GuardUnmeasured
+    from particle_sliders.weight_policy import require_no_weight_ema
     from .upstream import load
+    require_no_weight_ema(config.get("ema_decay"))
+    config = dict(config, ema_decay=None)
+    fixture = runner is not None and config.get("device") == "cpu"
+    if guard is not None or finished_probe is not None:
+        if (not isinstance(guard, CandidateGuard) or guard.binding["media"] != "text"
+                or not callable(finished_probe)):
+            raise GuardUnmeasured("Qwen3.5 requires a qualified finished-text probe and candidate guard")
+        guard.require_update()
+    elif not fixture:
+        raise GuardUnmeasured("Qwen3.5 has no bound qualified finished-text probe")
+    resume_source = None
+    if config.get("resume") and guard is not None:
+        resume_source = FileRecord.from_path(Path(config["resume"]).resolve(strict=True))
+        guard.require_selection(resume_source)
     api = load(config.get("upstream"))
     output = Path(config["output"])
-    output.mkdir(parents=True, exist_ok=True)
-    if (output / "result.json").exists():
-        raise FileExistsError("Completed run exists; select another output")
+    if type(config.get("steps")) is not int or config["steps"] < 1:
+        raise ValueError("Particle training requires a positive integer step budget")
+    output.mkdir(parents=True)
     torch.set_num_threads(config.get("cpu_threads", 4))
     torch.manual_seed(config.get("seed", 7))
     runner, identity = load_host(config["workspace"], config.get("device", "cuda")) if runner is None else runner
@@ -95,7 +102,6 @@ def train_particle(config, *, runner=None):
         training = prepare(model, slider, splits["train"])
         development = prepare(model, slider, splits["dev"])
         game = make_game(model, slider, training, config, api)
-        ema = initialize_ema(slider)
         contract = dict(config=config, identity=identity, data_sha256=digest(config["data"]),
                         upstream=api.identity, formulation=game.state_dict()["config"],
                         implementation=implementation_identity(),
@@ -103,7 +109,12 @@ def train_particle(config, *, runner=None):
                         names=slider.names, rows={k:len(v) for k,v in splits.items()})
         completed = 0
         if config.get("resume"):
-            packet = torch.load(config["resume"], map_location=next(slider.parameters()).device, weights_only=True)
+            source = resume_source.path if resume_source else config["resume"]
+            if resume_source:
+                resume_source.verify()
+            packet = torch.load(source, map_location=next(slider.parameters()).device, weights_only=True)
+            if resume_source:
+                resume_source.verify()
             # Output and resume paths are operational; the training recipe must match.
             old = {k:v for k,v in packet["contract"]["config"].items() if k not in {"output", "resume"}}
             new = {k:v for k,v in config.items() if k not in {"output", "resume"}}
@@ -113,36 +124,59 @@ def train_particle(config, *, runner=None):
             if "game" not in packet:
                 raise ValueError("Historical particle checkpoints require their original environment")
             game.load_state_dict(packet["game"])
-            ema = packet["ema"]
             completed = packet["step"]
             if completed != game.completed_steps:
                 raise ValueError("Checkpoint step differs from the actual shared-game step")
         write_json(output / "contract.json", contract)
         initial = dict(step=completed, **metrics(model, slider, development))
         write_json(output / "initial.json", initial)
-        def checkpoint(step):
-            packet = dict(contract=contract, step=step, game=game.state_dict(), ema=ema)
+        def checkpoint(step, *, assess=False):
+            packet = dict(contract=contract, step=step, game=game.state_dict())
             temporary = output / "continuation.tmp"
-            torch.save(packet, temporary)
-            temporary.replace(output / "continuation.pt")
+            target = output / "continuation.pt"
+            with temporary.open("wb") as stream:
+                torch.save(packet, stream)
+                stream.flush()
+                os.fsync(stream.fileno())
+            temporary.replace(target)
+            if assess:
+                retained = output / f"assessed-full-{step:06d}.pt"
+                retained.hardlink_to(target)
+                descriptor = os.open(output, os.O_RDONLY)
+                try:
+                    os.fsync(descriptor)
+                finally:
+                    os.close(descriptor)
+                source = FileRecord.from_path(retained.resolve())
+                guard.check_checkpoint(source, lambda: finished_probe(runner, slider, source))
+                return source
+            return None
+
+        endpoint = config["steps"]
+        milestones = {(quarter * endpoint + 3) // 4 for quarter in range(1, 5)}
+        approved_checkpoint = resume_source
         with (output / "metrics.jsonl").open("a") as stream:
-            for step in range(completed, config["steps"]):
+            for step in range(completed, endpoint):
+                if guard is not None:
+                    guard.require_update()
                 record = game.step()
-                update_ema(ema, slider)
                 record["particle_grad_norm"] = float(slider.particles.grad.norm())
                 record.update(step=step+1, elapsed_seconds=time.monotonic()-start)
                 stream.write(json.dumps(record, allow_nan=False)+"\n"); stream.flush()
-                if (step+1) % config.get("checkpoint_every", 16) == 0 or step+1 == config["steps"]:
-                    checkpoint(step+1)
+                assess = guard is not None and step + 1 in milestones
+                if assess or (step+1) % config.get("checkpoint_every", 16) == 0 or step+1 == endpoint:
+                    saved = checkpoint(step+1, assess=assess)
+                    if saved is not None:
+                        approved_checkpoint = saved
                     print(json.dumps({k:record[k] for k in ("step", "g_adv", "d_loss", "particle_grad_norm", "elapsed_seconds")}), flush=True)
+        if guard is not None:
+            approved_checkpoint.verify()
+            guard.require_selection(approved_checkpoint)
         raw_metrics = metrics(model, slider, development)
-        with state(slider, ema):
-            ema_metrics = metrics(model, slider, development)
-        # Selection uses disjoint training-source development data, not the public test suite.
-        use_ema = ema_metrics["on_rms"] < raw_metrics["on_rms"]
-        if use_ema:
-            slider.load_state_dict(ema, strict=True)
-        save_file({k:v.detach().cpu().contiguous() for k,v in slider.state_dict().items()}, str(output / "particle.safetensors"))
+        raw_path = output / "particle.safetensors"
+        save_file({k:v.detach().cpu().contiguous() for k,v in slider.state_dict().items()},
+                  str(raw_path), metadata={"weights_kind": "raw"})
+        raw_sha256 = digest(raw_path)
         student, calibration = distill(slider, model, [r["ids"] for r in splits["calibration"]], api,
                                        rows=config.get("calibration_rows", 256))
         save_file(student, str(output / "distilled.safetensors"))
@@ -155,11 +189,14 @@ def train_particle(config, *, runner=None):
         deltas = linear_deltas(slider)
         save_file(deltas, str(output / "deltas.safetensors"))
         result = dict(kind="particle-distilled", upstream=api.identity, metric="raw_hidden_rms",
-                      steps=config["steps"], completed_steps=game.completed_steps, raw=raw_metrics, ema=ema_metrics,
-                      selected="ema" if use_ema else "raw", student=student_metrics, initial=initial,
+                      steps=config["steps"], completed_steps=game.completed_steps, raw=raw_metrics,
+                      selected="raw", student=student_metrics, initial=initial,
                       targets=names, elapsed_seconds=time.monotonic()-start,
                       contract_sha256=digest(output / "contract.json"),
+                      raw_sha256=raw_sha256,
                       deltas_sha256=digest(output / "deltas.safetensors"))
+        if approved_checkpoint is not None:
+            result["assessed_full"] = asdict(approved_checkpoint)
         write_json(output / "result.json", result)
         return result
     finally:
